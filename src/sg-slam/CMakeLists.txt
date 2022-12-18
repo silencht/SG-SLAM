@@ -41,7 +41,7 @@ set(ncnn_DIR "/home/ubuntu/SG-SLAM/src/sg-slam/Thirdparty/ncnn/build/install/lib
 set(NCNN_TARGET_LIB ncnn) 
 
 find_package(ncnn REQUIRED)
-find_package(PkgConfig QUIET)
+find_package(PkgConfig REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
