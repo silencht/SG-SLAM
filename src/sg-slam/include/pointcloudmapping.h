@@ -70,7 +70,6 @@
 
 using namespace ORB_SLAM2;
 class Detector3D;
-class Merge2d3d;
 
 class PointCloudMapping
 {
@@ -117,6 +116,7 @@ protected:
     pcl::PointCloud<pcl::PointXYZRGB> globalMap_cloud_filtered;
 
     pcl::VoxelGrid<pcl::PointXYZRGB>  voxel;
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
 
     ros::Publisher pcl_publisher;
     ros::Publisher marker_publisher;

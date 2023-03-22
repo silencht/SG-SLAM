@@ -74,6 +74,7 @@ cv::Mat FrameDrawer::DrawFrame()
     if(im.channels()<3) //this should be always true
         cvtColor(im,im,CV_GRAY2BGR);
 
+
     //Draw
     if(state==Tracking::NOT_INITIALIZED) //INITIALIZING
     {

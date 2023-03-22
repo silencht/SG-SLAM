@@ -427,7 +427,7 @@ void Frame::ComputeBoW()
         mpORBvocabulary->transform(vCurrentDesc,mBowVec,mFeatVec,4);
     }
 }
-int  Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray)
+int Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray)
 {
     //transform CurrentFrame's mvKeys to Currentpoint
     Curpoint.clear();
@@ -488,15 +488,15 @@ int  Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const 
             offset++;
         }
         mDescriptors = mDescriptors_Temp;
-
 */
+
 
 /*version2: only detect EpiLineDist and remove Dynamic keypoints.
         cv::Mat mDescriptors_Temp;
         std::vector<cv::KeyPoint> mvKeys_Temp = mvKeys;
         while(it_cur != mvKeys.end())
         {
-            if(!CheckEpiLineDistToRmDynamicPoint(*it_cur,*it_pre,FundMat,1.0))
+            if(!CheckEpiLineDistToRmDynamicPoint(*it_cur,*it_pre,FundMat,0.2))
             {
                   mvKeys.erase(it_cur);
                   it_pre++;
@@ -510,15 +510,15 @@ int  Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const 
             }
             offset++;
         }
-        if(keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.3)
+        if(keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.1)
         {
             //std::cout<<"keypoint_sum: "<<keypoint_sum<<std::endl;
             std::swap(mvKeys, mvKeys_Temp);
         }
         else
             std::swap(mDescriptors, mDescriptors_Temp);
-*/
 
+*/
 
 // version3 : combine EpiLineDist and Object Detect ,if point is in ObjectReigion, increase EpiLineDist Thresh
         cv::Mat mDescriptors_Temp;
@@ -572,6 +572,7 @@ int  Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const 
         }
 
             //std::swap(mDescriptors, mDescriptors_Temp);
+            
     }
 
 
@@ -605,8 +606,8 @@ bool Frame::isInDynamicRegion(const cv::KeyPoint &kp)
 
     for(int i = 0; i < mvObject2D.size(); ++i)
     {
-        int object_id = mvObject2D[i].id;
-        if (object_id == 15)
+        int class_id = mvObject2D[i].id;
+        if (class_id == 15)
         {
             if(kp_x > mvObject2D[i].rect.x && kp_x < mvObject2D[i].rect.x+mvObject2D[i].rect.width &&
                kp_y > mvObject2D[i].rect.y && kp_y < mvObject2D[i].rect.y+mvObject2D[i].rect.height)

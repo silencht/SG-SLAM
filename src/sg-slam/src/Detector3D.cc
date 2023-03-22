@@ -2,13 +2,14 @@
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <cmath>
 
 Detector3D::Detector3D()
 {
     // 统计学滤波器
     mSor.setMeanK (50);
     mSor.setStddevMulThresh (0);
-    mVoxel.setLeafSize(0.0, 0.01, 0.01);
+    mVoxel.setLeafSize(0.01, 0.01, 0.01);
     mpObjectDatabase = new(ObjectDatabase);
 
 }
@@ -43,9 +44,9 @@ bool Detector3D::DetectOne(Object2D& object2d, SemanticObject& semantic_object, 
         int beg = (int)rect.x + ((int)rect.y-1)*depth_img.cols - 1;
 
 // 1. 计算平均深度
-        int count = 0;
-        float depth_sum = 0.0;
-        float depth_threshold ;
+        size_t count = 0;
+        double depth_sum = 0.0;
+        double depth_threshold ;
         int row_beg = (int)rect.height*0.35;//0.35   0.65
         int row_end = (int)rect.height*0.65;
         int col_beg = (int)rect.width*0.35;
@@ -57,7 +58,7 @@ bool Detector3D::DetectOne(Object2D& object2d, SemanticObject& semantic_object, 
             for(int j = start; j < end; j++)
             {
                 float d = depth[j];
-                if (d < 0.5 || d > 4.0) continue;
+                if (d < 0.6 || d > 4.0 || isnan(d)) continue;
                 depth_sum += d;
                 count++;
             }
@@ -65,13 +66,14 @@ bool Detector3D::DetectOne(Object2D& object2d, SemanticObject& semantic_object, 
         if(count>0)
             depth_threshold = depth_sum / count;
         else return false;
+
 // 2. 根据平均深度值 获取目标点云索引
         pcl::PointIndices indices;
         
-        row_beg = (int)rect.height*0.25;
-        row_end = (int)rect.height*0.75;
-        col_beg = (int)rect.width*0.25;
-        col_end = (int)rect.width*0.75;
+        row_beg = (int)rect.height*0.3;
+        row_end = (int)rect.height*0.7;
+        col_beg = (int)rect.width*0.3;
+        col_end = (int)rect.width*0.7;
         
         for(int k = row_beg; k < row_end; k++)
         {
@@ -91,12 +93,13 @@ bool Detector3D::DetectOne(Object2D& object2d, SemanticObject& semantic_object, 
         mExtractInd.filter (*point_cloud);
 
 // 4. 滤波
-        mVoxel.setInputCloud( point_cloud );
-        mVoxel.filter( *point_cloud );
-
-        mSor.setInputCloud (point_cloud);
-        mSor.filter (*point_cloud);
-
+        if(!point_cloud->empty())
+        {
+            mVoxel.setInputCloud( point_cloud );
+            mVoxel.filter( *point_cloud );
+            mSor.setInputCloud (point_cloud);
+            mSor.filter(*point_cloud);
+        }
         *object_point_cloud = *point_cloud;
         
 // 5. 计算点云团参数

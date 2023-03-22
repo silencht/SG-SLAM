@@ -12,14 +12,16 @@ std::vector<SemanticObject> SemanticObjects;
 
 PointCloudMapping::PointCloudMapping(double resolution)
 {
-    semanticObject        = boost::make_shared< pcl::PointCloud<pcl::PointXYZRGB> >( );
-    globalMap             = boost::make_shared< pcl::PointCloud<pcl::PointXYZRGB> >( );
+    semanticObject  = boost::make_shared< pcl::PointCloud<pcl::PointXYZRGB> >( );
+    globalMap       = boost::make_shared< pcl::PointCloud<pcl::PointXYZRGB> >( );
 
     mpDetector3D = new(Detector3D);
-
     voxel.setLeafSize( resolution, resolution, resolution);
+    sor.setMeanK (50);
+    sor.setStddevMulThresh (0);
     viewerThread = boost::make_shared<thread>( bind(&PointCloudMapping::MapViewer, this ) );
 }
+
 PointCloudMapping::~PointCloudMapping()
 {
     delete mpDetector3D;
@@ -57,7 +59,7 @@ void PointCloudMapping::generatePointCloud(KeyFrame* kf ,pcl::PointCloud<pcl::Po
             temp->points[index].r = kf->mImRGB.ptr<uchar>(m)[n*3+2];
             temp->points[index].g = kf->mImRGB.ptr<uchar>(m)[n*3+1];
             temp->points[index].b = kf->mImRGB.ptr<uchar>(m)[n*3+0];
-            if(d < 0.8 || d > 4.0) temp->points[index].z = NAN; //default 1.0 4.0
+            //if(d < 0.6 || d > 6.0) temp->points[index].z = NAN; //default 1.0 4.0
             //if(temp->points[index].y < -2.5 || temp->points[index].y > 2.5) temp->points[index].z = NAN;
         }
     }
@@ -82,10 +84,10 @@ void PointCloudMapping::generatePointCloud(KeyFrame* kf ,pcl::PointCloud<pcl::Po
 
 void PointCloudMapping::MapViewer()
 {
-    std::cout<<"start viewer: "<< std::endl;
+    std::cout<<"start viewer."<< std::endl;
     ros::NodeHandle nh;
-    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/ORB_SLAM2/Point_Clouds",100);
-    marker_publisher= nh.advertise<visualization_msgs::Marker>("/ORB_SLAM2/Semantic_Objects",100);
+    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/SG_SLAM/Point_Clouds",100);
+    marker_publisher= nh.advertise<visualization_msgs::Marker>("/SG_SLAM/Semantic_Objects",100);
 
     settingTextMarkerBasicParameter(0.2);
     settingCubeMarkerBasicParameter();
@@ -114,7 +116,7 @@ void PointCloudMapping::MapViewer()
         if(N==0)
 	    {
 	        cout<<"keyframe miss."<<endl;
-            usleep(1000);
+            usleep(500);
 	        continue;
 	    }
 
@@ -126,21 +128,73 @@ void PointCloudMapping::MapViewer()
             generatePointCloud(keyframes[i],globalMap,semanticObject);	   
         }
 
-        voxel.setInputCloud( semanticObject );
-        voxel.filter( semanticObject_filtered );
-        //voxel.setInputCloud( globalMap );
-        //voxel.filter( globalMap_filtered );
+        // if(!semanticObject->empty())
+        // {
+        //     voxel.setInputCloud( semanticObject );
+        //     voxel.filter( semanticObject_filtered );
+        // }
+       
+        if(!globalMap->empty())
+        {
+            voxel.setInputCloud( globalMap );
+            voxel.filter( *globalMap );
+            sor.setInputCloud (globalMap);
+            sor.filter(globalMap_filtered);
+        }
+        
+	    //Cloud_transform(semanticObject_filtered,semanticObject_cloud_filtered); 
+        Cloud_transform(globalMap_filtered,globalMap_cloud_filtered);
 
-	    Cloud_transform(semanticObject_filtered,semanticObject_cloud_filtered); 
-        //Cloud_transform(globalMap_filtered,globalMap_cloud_filtered);
+	    //pcl::toROSMsg(semanticObject_cloud_filtered, semanticObject_pcl_to_publish);
+        pcl::toROSMsg(globalMap_cloud_filtered, globalMap_pcl_to_publish);
 
-	    pcl::toROSMsg(semanticObject_cloud_filtered, semanticObject_pcl_to_publish);
-        //pcl::toROSMsg(globalMap_cloud_filtered, globalMap_pcl_to_publish);
-
-        semanticObject_pcl_to_publish.header.frame_id = "/pointCloud";
-        //globalMap_pcl_to_publish.header.frame_id = "/pointCloud";
+        //semanticObject_pcl_to_publish.header.frame_id = "/pointCloud";
+        globalMap_pcl_to_publish.header.frame_id = "/pointCloud";
 
         int so_count = mpDetector3D->mpObjectDatabase->getDataBaseSize();
+
+        for(uint16_t id = 0; id < so_count; ++id)
+        {
+            cube_marker_to_publish.id = id+1;
+            
+            string name;
+            name = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].object_name;
+
+            if (name == "chair")settingMarkerColor(Blue);
+            else if(name == "tvmonitor")settingMarkerColor(Red);
+            else if(name == "bottle")settingMarkerColor(Green);
+            else settingMarkerColor(Yellow);
+
+            // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+            cube_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            cube_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+
+            // cube_marker_to_publish.scale.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].size[2];
+            // cube_marker_to_publish.scale.y = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].size[0];
+            // cube_marker_to_publish.scale.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].size[1];
+
+            cube_marker_to_publish.scale.x = 0.5;
+            cube_marker_to_publish.scale.y = 0.5;
+            cube_marker_to_publish.scale.z = 0.5;
+
+            marker_publisher.publish(cube_marker_to_publish);
+            //std::cout<<name<<":"<<cube_marker_to_publish.pose.position.x<<","<<-cube_marker_to_publish.pose.position.y<<","<<
+            //cube_marker_to_publish.pose.position.z<<"."<<std::endl;
+
+            text_marker_to_publish.id = id+1;
+            text_marker_to_publish.text = name + ":("+to_string(mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2])
+                                     +","+to_string(-mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0])+","+
+                                     to_string(-mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1])+")";
+            text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+           
+            marker_publisher.publish(text_marker_to_publish);
+
+        }
+
+/*
         for(uint16_t id = SemanticObject_Count; id < so_count; ++id)
         {
             cube_marker_to_publish.id = id+1;
@@ -174,16 +228,25 @@ void PointCloudMapping::MapViewer()
                                      +","+to_string(-mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0])+","+
                                      to_string(-mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1])+")";
             text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
-            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0]+0.8;
-            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]-0.6;
-           
+            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1];
+          
             marker_publisher.publish(text_marker_to_publish);
 
             SemanticObject_Count = so_count;
         }
+*/        
+        // if(semanticObject_pcl_to_publish.data.size())
+        // {
+        //     pcl_publisher.publish(semanticObject_pcl_to_publish);
+        // }
+        if(globalMap_pcl_to_publish.data.size())
+        {
+            pcl_publisher.publish(globalMap_pcl_to_publish);
+        }
 
-        pcl_publisher.publish(semanticObject_pcl_to_publish);
-        //pcl_publisher.publish(globalMap_pcl_to_publish);
+
+
         lastKeyframeSize = N;
     }
 
@@ -214,7 +277,7 @@ void PointCloudMapping::shutdown()
 void PointCloudMapping::settingTextMarkerBasicParameter(double scale)
 {
     text_marker_to_publish.header.frame_id="/map";
-    text_marker_to_publish.ns = "sematic_objects";
+    text_marker_to_publish.ns = "sematic_objects_coordinate";
     text_marker_to_publish.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
     text_marker_to_publish.action = visualization_msgs::Marker::ADD;
     // Set the scale of the marker -- 1x1x1 here means 1m on a side

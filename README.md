@@ -12,6 +12,14 @@ We performed an experimental evaluation on the TUM dataset, the Bonn dataset, an
 
 **Figure1**. Overview of the framework of the SG-SLAM system. The original work of ORB-SLAM2 is presented on an aqua-green background, while **our main new or modified work is presented on a red background**.
 
+<img src="./doc/semantic-object-metric-map.png" style="zoom: 25%;" />
+
+**Figure2**.  Semantic object metric map for tum rgbd dataset fr3/walking_xyz sequence
+
+<img src="./doc/octomap-zh.png" style="zoom: 15%;" />
+
+**Figure3**.  octo map for tum rgbd dataset fr3/long office household sequence
+
 **System Features :**
 
 - Based on ORB-SLAM2, NCNN,  ROS, etc.

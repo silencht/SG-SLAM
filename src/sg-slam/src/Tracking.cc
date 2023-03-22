@@ -208,6 +208,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
     mImGray = imRGB;
     mImRGB  = imRGB;
     mImDepth = imD;
+
     //filter depth image to remove outliers.
     //cv::medianBlur(imD,mImDepth,5);
     if(mImGray.channels()==3)

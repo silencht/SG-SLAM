@@ -51,7 +51,7 @@ namespace ORB_SLAM2 {
         vobject2d.clear();
         for (int i = 0; i < out.h; i++) {
             const float *values = out.row(i);
-            if(values[1]>0.6 || (values[1]>0.2  && int(values[0])==15 )){ //default 0.85 0.35 15
+            if(values[1]>0.98 || (values[1]>0.2  && int(values[0])==15 )){ //default 0.85 0.35 15
                 if(values[0]==20 && values[1]<0.85)return;
                 Object2D object2d;
                 object2d.id = int(values[0]);
@@ -78,36 +78,36 @@ namespace ORB_SLAM2 {
         }
     }
 
-void Detecting::draw_objects(const cv::Mat &bgr, std::vector<Object2D> &vobject2d)
-{
-    cv::Mat image = bgr.clone();
-    for (size_t i = 0; i < vobject2d.size(); i++)
+    void Detecting::draw_objects(const cv::Mat &bgr, std::vector<Object2D> &vobject2d)
     {
-        const Object2D &obj2d = vobject2d[i];
+        cv::Mat image = bgr.clone();
+        for (size_t i = 0; i < vobject2d.size(); i++)
+        {
+            const Object2D &obj2d = vobject2d[i];
 
-        cv::rectangle(image, obj2d.rect, cv::Scalar(255, 0, 0),3);
+            cv::rectangle(image, obj2d.rect, cv::Scalar(255, 0, 0),3);
 
-        char text[256];
-        sprintf(text, "%s %.1f%%", obj2d.name.c_str(), obj2d.prob * 100);
+            char text[256];
+            sprintf(text, "%s %.1f%%", obj2d.name.c_str(), obj2d.prob * 100);
 
-        int baseLine = 0;
-        cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.7, 1.75, &baseLine);
+            int baseLine = 0;
+            cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.7, 1.75, &baseLine);
 
-        int x = obj2d.rect.x;
-        int y = obj2d.rect.y - label_size.height - baseLine;
-        if (y < 0)
-            y = 0;
-        if (x + label_size.width > image.cols)
-            x = image.cols - label_size.width;
+            int x = obj2d.rect.x;
+            int y = obj2d.rect.y - label_size.height - baseLine;
+            if (y < 0)
+                y = 0;
+            if (x + label_size.width > image.cols)
+                x = image.cols - label_size.width;
 
-        cv::rectangle(image, cv::Rect(cv::Point(x, y),cv::Size(label_size.width, label_size.height + baseLine)),
-                      cv::Scalar(255, 255, 255), CV_FILLED);
+            cv::rectangle(image, cv::Rect(cv::Point(x, y),cv::Size(label_size.width, label_size.height + baseLine)),
+                        cv::Scalar(255, 255, 255), CV_FILLED);
 
-        cv::putText(image, text, cv::Point(x, y + label_size.height),cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0),1.75);
-        }
+            cv::putText(image, text, cv::Point(x, y + label_size.height),cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0),1.75);
+            }
 
-        // cv::imshow("ORB-SLAM2: Current Frame", image);
-        // cv::waitKey(1e3/30.0);
+            // cv::imshow("SG-SLAM: Current Frame", image);
+            // cv::waitKey(1e3/30.0);
     }
 
     void Detecting::Run() {

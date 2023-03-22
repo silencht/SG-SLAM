@@ -36,8 +36,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
-
-set(ncnn_DIR "/home/ubuntu/SG-SLAM/src/sg-slam/Thirdparty/ncnn/build/install/lib/cmake/ncnn" CACHE PATH "Directory that contains ncnnConfig.cmake")
+set(ncnn_DIR "/usr/local/lib/ncnn/lib/cmake/ncnn" CACHE PATH "Directory that contains ncnnConfig.cmake")
 set(NCNN_TARGET_LIB ncnn) 
 
 find_package(ncnn REQUIRED)
@@ -108,7 +107,10 @@ ${OCTOMAP_LIBRARIES}
 # Build examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples)
 
-add_executable(sg-slam_tum Examples/rgbd_tum.cc)
-target_link_libraries(sg-slam_tum ${PROJECT_NAME})
+add_executable(sg_slam_tum Examples/rgbd_tum.cc)
+target_link_libraries(sg_slam_tum ${PROJECT_NAME})
+
+add_executable(sg_slam_ros_rgbd Examples/ros_rgbd.cc)
+target_link_libraries(sg_slam_ros_rgbd ${PROJECT_NAME})
 
 

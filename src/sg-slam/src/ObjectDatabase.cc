@@ -23,7 +23,7 @@ ObjectDatabase::ObjectDatabase()
       mvSizes.push_back(0.6);
     }
     mvSizes[5] = 0.2;   // 瓶子
-    mvSizes[9] = 0.5;   // 椅子
+    mvSizes[9] = 1.0;   // 椅子
     mvSizes[20] = 0.5;  // 显示器
 }
 
@@ -77,7 +77,7 @@ void ObjectDatabase::addObject(SemanticObject& cluster)
         while(true)
         {
             iter = find(++iter, it_end, cluster.object_name);
-            if (iter != it_end )
+            if (iter != it_end)
                     likely_obj.push_back(iter);
             else break;
         }
