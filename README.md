@@ -8,6 +8,10 @@ In this paper, we propose SG-SLAM, which is a real-time RGB-D semantic visual SL
 
 We performed an experimental evaluation on the TUM dataset, the Bonn dataset, and the OpenLORIS-Scene dataset. The results show that SG-SLAM is not only one of the most real-time, accurate, and robust systems in dynamic scenes, but also allows the creation of intuitive semantic metric maps.
 
+（For the Chinese version, see the README-zh.md file in the directory）
+
+（中文版本见目录下README-zh.md文件）
+
 ![sg-slam](./doc/sg-slam-system-overview.png)
 
 **Figure1**. Overview of the framework of the SG-SLAM system. The original work of ORB-SLAM2 is presented on an aqua-green background, while **our main new or modified work is presented on a red background**.
@@ -31,7 +35,7 @@ We performed an experimental evaluation on the TUM dataset, the Bonn dataset, an
 
 SG-SLAM is released under a [GPLv3 license](https://github.com/silencht/SG-SLAM/blob/main/LICENSE).
 
-Paper is available under the "Early Access" area on [IEEE Xplore](https://ieeexplore.ieee.org/document/9978699).
+Paper is available on [IEEE Xplore](https://ieeexplore.ieee.org/abstract/document/9978699/).
 
 If you use SG-SLAM in an academic work, please cite:
 
