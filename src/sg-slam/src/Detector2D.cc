@@ -52,7 +52,6 @@ namespace ORB_SLAM2 {
         for (int i = 0; i < out.h; i++) {
             const float *values = out.row(i);
             if(values[1]>0.98 || (values[1]>0.2  && int(values[0])==15 )){ //default 0.85 0.35 15
-                if(values[0]==20 && values[1]<0.85)return;
                 Object2D object2d;
                 object2d.id = int(values[0]);
                 object2d.name = std::string(class_names[int(values[0])]);
