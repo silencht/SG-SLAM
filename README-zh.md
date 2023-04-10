@@ -20,6 +20,12 @@ SG-SLAM是一个基于[ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2)框架的
 
 **图3**.  tum rgbd dataset fr3/long office household 序列的八叉树地图
 
+<img src="./doc/realmap-zh.png" style="zoom: 15%;" />
+
+**图**4.  实际运行效果图
+
+
+
 **系统特点 :**
 
 - 基于ORB-SLAM2, NCNN,  ROS, etc.
@@ -174,8 +180,8 @@ cd SG-SLAM/src/octomap_server/launch
 roslaunch octomap.launch
 #terminal 3
 roslaunch transform.launch
-#terminal 4，打开rviz接收话题显示地图，默认配置文件在SG-SLAM\src\sg-slam\Examplesrvizconfig.rviz，可根据程序、参数配置进行相应调整
-rviz
+#terminal 4，你可以使用我的rviz配置文件（如下命令），它的路径位于SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz，这将直接在打开的rviz中订阅一些地图主题。当然，也可以直接打开rviz，然后手动订阅相关话题。
+rviz -d SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz
 #terminal 5，运行tum数据集的walking_xyz序列。另外，也可运行硬件相机，如文件run_astra_pro_camera.sh
 #相机参数配置yaml文件最后一行PointCloudMapping.Resolution: 0.01参数意义为对点云进行体素滤波的分辨率值
 cd SG-SLAM/src/sg-slam/
@@ -201,4 +207,130 @@ cd SG-SLAM/src/sg-slam/
 
 ## 5. 其他
 
-- 待补充
+### 5.1 octomap_server节点
+
+/SG-SLAM/src/octomap_server/launch/octomap.launch
+
+该文件用于启动 octomap_server 节点并配置一些参数。 你可以在这里看到这些参数的含义（http://wiki.ros.org/octomap_server、https://octomap.github.io/）
+
+其中，**param name="resolution"**参数表示octomap的体素分辨率。 参数越小，地图体素分割越精细，分辨率越高。 但是处理时间和计算复杂度也增加了。
+
+**occupancy_min_z** 和 **occupancy_max_z** 参数可以选择性通过z轴范围内的点云。 如果您的相机初始视图与地面平行，您还可以使用 occupancy_min_z 参数来过滤掉地面（一个小的诡计）。 同样，occupancy_min_z 参数可用于过滤出房屋的顶部体素。
+
+**filter_ground**是过滤掉地面的正常算法（不是直接使用occupancy_min_z过滤掉地面的技巧）。 用法可以参考上面的网址。 当然，现在是关闭的。
+
+```xml
+<!-- 
+  Example launch file for octomap_server mapping: 
+-->
+<launch>
+	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+		<remap from="cloud_in" to="/SG_SLAM/Point_Clouds" />
+		<param name="frame_id" type="string" value="/map" />
+		<param name="resolution" value="0.05" />
+        <param name="sensor_model/hit" value="0.7" />
+        <param name="sensor_model/miss" value="0.4" />
+		<param name="sensor_model/max" value="0.99" />
+		<param name="sensor_model/min" value="0.12" />
+		<param name="sensor_model/max_range" value="-1.0" /> 
+		<param name="height_map" type="bool" value="false" />
+		<param name="colored_map" type="bool" value="true" />
+		<param name="latch" type="bool" value="false" />
+		<param name="occupancy_min_z" type="double" value="-1.5" />
+		<param name="occupancy_max_z" type="double" value="1.5" />
+
+		<param name="filter_ground" type="bool" value="false" />
+		<param name="base_frame_id" type="string" value="/map" />
+
+		<param name="filter_speckles" type="bool" value="true" />
+		<param name="ground_filter/distance" type="double" value="0.05" />    
+		<param name="ground_filter/angle" type="double" value="0.15" />        
+		<param name="ground_filter/plane_distance" type="double" value="0.05" /> 
+		<param name="pointcloud_min_z" type="double" value="-5.0" />
+		<param name="pointcloud_max_z" type="double" value="5.0" />
+	</node>
+</launch>
+```
+
+### 5.2 相机参数yaml文件
+
+SG-SLAM/src/sg-slam/Examples/astra_pro_camera.yaml
+
+SG-SLAM/src/sg-slam/Examples/TUM1.yaml
+
+……
+
+相机配置参数文件最后一行还有一个分辨率参数**PointCloudMapping.Resolution**
+
+从System.cc读取yaml配置文件时的代码可以看出，这个参数最终传递给了**PointCloudMapping**类中的Voxel滤镜对象构造函数。
+
+这个参数最后传给了**voxel filter object**，也就是深度图转化为3D点云后，对点云进行体素过滤所使用的分辨率。 因为深度图直接转换出来的3D点云数量非常多（640*480），计算负担大，所以需要进行过滤。 voxel filter的分辨率和octomap类似，就是用体素中所有点的重心来近似显示体素中其他点，从而减少计算量。
+
+经过我的测试，在我的设备上一般设置为0.01，计算效率和效果达到了很好的平衡。 可针对个人硬件的不同对参数进行调整。
+
+```yaml
+%YAML:1.0
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 575.520619
+Camera.fy: 575.994771
+…………omitted here
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+…………omitted here
+
+PointCloudMapping.Resolution: 0.01
+```
+
+### 5.3 地图/对象位置
+
+/SG-SLAM/src/octomap_server/launch/octomap.launch
+
+```xml
+<!-- 
+  Example launch file for octomap_server mapping: 
+  Listens to incoming PointCloud2 data and incrementally builds an octomap. 
+  The data is sent out in different representations. 
+	RED：X GREEN：Y BLUE：Z
+-->
+<launch>	
+	<node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 /map /pointCloud 70" />​
+</launch>
+```
+
+SG-SLAM/src/sg-slam/src/pointcloudmapping.cc
+
+```c++
+void PointCloudMapping::MapViewer()
+{
+    std::cout<<"start viewer."<< std::endl;
+    ros::NodeHandle nh;
+    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/SG_SLAM/Point_Clouds",100);
+    marker_publisher= nh.advertise<visualization_msgs::Marker>("/SG_SLAM/Semantic_Objects",100);
+//…………omitted here
+// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+            cube_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            cube_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+//…………omitted here
+            text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+```
+
+这里两个文件的参数是用来调整地图显示效果的，都是静态坐标变换。
+
+例如“text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;” 和“cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;”
+
+**代码中的“+0.8”**表示要释放的3D物体坐标与rviz八叉树地图坐标一致。
+
+您可以调整此参数以测试效果， 以便了解它的作用并更改为适合您的参数。
+
+### 5.4 动态特征剔除算法代码
+
+代码位于Frame.cc，主要在RmDynamicPointWithMultiviewGeometry函数中

@@ -153,7 +153,6 @@ Frame::Frame(Tracking* pTracker, cv::Mat &imGray, const cv::Mat &imDepth, const 
     cv::Mat  imGrayT = imGray;
     if(imGrayPre.data)
     {
-        //多视图几何剔除动态点
         RmDynamicPointWithMultiviewGeometry(imGrayPre,imGray);
         std::swap(imGrayPre, imGrayT);
     }

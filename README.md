@@ -20,9 +20,13 @@ We performed an experimental evaluation on the TUM dataset, the Bonn dataset, an
 
 **Figure2**.  Semantic object metric map for tum rgbd dataset fr3/walking_xyz sequence
 
-<img src="./doc/octomap-zh.png" style="zoom: 15%;" />
+<img src="./doc/octomap.png" style="zoom: 15%;" />
 
 **Figure3**.  octo map for tum rgbd dataset fr3/long office household sequence
+
+<img src="./doc/realmap.png" style="zoom: 15%;" />
+
+**Figure4**.  Actual effect
 
 **System Features :**
 
@@ -165,8 +169,8 @@ cd SG-SLAM/src/octomap_server/launch
 roslaunch octomap.launch
 #terminal 3
 roslaunch transform.launch
-#terminal 4
-rviz
+#terminal 4，you can use my rviz configuration file（like the command below）, its path is located in SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz, This will subscribe to some map-published topics directly in rviz.Of course, you can also open rviz directly, and then manually subscribe to the related topic.
+rviz -d SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz
 #terminal 5
 cd SG-SLAM/src/sg-slam/
 ./run_tum_walking_xyz.sh
@@ -189,6 +193,133 @@ cd SG-SLAM/src/sg-slam/
 - https://github.com/Quitino/IndoorMapping
 - ...
 
-## 5. PostScript
+## 5. Other
 
-- To be supplemented...
+### 5.1 octomap_server
+
+/SG-SLAM/src/octomap_server/launch/octomap.launch
+
+This file is used to start the octomap_server node and configure some parameters. You can see what these parameters mean here(http://wiki.ros.org/octomap_server、https://octomap.github.io/)
+
+Among them, the **param name="resolution"**parameter indicates the voxel resolution of the octomap. The smaller the parameter, the finer the map voxel segmentation and the higher the resolution. But the processing time and computational complexity also increase.
+
+The **occupancy_min_z** and **occupancy_max_z** parameters can selectively pass through the point cloud within the z-axis range. If your initial camera view is parallel to the ground, you can also use the occupancy_min_z parameter to do a trick to filter out the ground. Similarly, the occupancy_min_z parameter can be used to filter out the top voxels of the house.
+
+**filter_ground** is the normal algorithm for filtering out the ground (not the trick of directly using occupancy_min_z to filter out the ground). Usage can refer to the above URL.
+
+```xml
+<!-- 
+  Example launch file for octomap_server mapping: 
+-->
+<launch>
+	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+		<remap from="cloud_in" to="/SG_SLAM/Point_Clouds" />
+		<param name="frame_id" type="string" value="/map" />
+		<param name="resolution" value="0.05" />
+        <param name="sensor_model/hit" value="0.7" />
+        <param name="sensor_model/miss" value="0.4" />
+		<param name="sensor_model/max" value="0.99" />
+		<param name="sensor_model/min" value="0.12" />
+		<param name="sensor_model/max_range" value="-1.0" /> 
+		<param name="height_map" type="bool" value="false" />
+		<param name="colored_map" type="bool" value="true" />
+		<param name="latch" type="bool" value="false" />
+		<param name="occupancy_min_z" type="double" value="-1.5" />
+		<param name="occupancy_max_z" type="double" value="1.5" />
+
+		<param name="filter_ground" type="bool" value="false" />
+		<param name="base_frame_id" type="string" value="/map" />
+
+		<param name="filter_speckles" type="bool" value="true" />
+		<param name="ground_filter/distance" type="double" value="0.05" />    
+		<param name="ground_filter/angle" type="double" value="0.15" />        
+		<param name="ground_filter/plane_distance" type="double" value="0.05" /> 
+		<param name="pointcloud_min_z" type="double" value="-5.0" />
+		<param name="pointcloud_max_z" type="double" value="5.0" />
+	</node>
+</launch>
+```
+
+### 5.2 camera.yaml
+
+SG-SLAM/src/sg-slam/Examples/astra_pro_camera.yaml
+
+SG-SLAM/src/sg-slam/Examples/TUM1.yaml
+
+……
+
+The last line in the camera configuration parameter file also has a resolution parameter **PointCloudMapping.Resolution**
+
+It can be seen from the code when System.cc reads the yaml configuration file that this parameter is finally passed to the Voxel filter object constructor in the **PointCloudMapping** class.
+
+This parameter is finally passed to the **voxel filter object**, which is the resolution used for voxel filtering on the point cloud after the depth map is transformed into a 3D point cloud. Because the number of 3D point clouds directly converted from the depth map is large (640*480), the calculation burden is heavy, so filtering is performed. The resolution of the voxel filter is similar to that of the octomap, that is, the centroid of the same position is replaced, so that the amount of calculation is reduced. 
+
+After my test, it is generally set to 0.01 on my device, and the calculation efficiency and effect have reached a good balance. Adjustable to individual hardware.
+
+```yaml
+%YAML:1.0
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 575.520619
+Camera.fy: 575.994771
+…………omitted here
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+…………omitted here
+
+PointCloudMapping.Resolution: 0.01
+```
+
+### 5.3 Object Position
+
+/SG-SLAM/src/octomap_server/launch/octomap.launch
+
+```xml
+<!-- 
+  Example launch file for octomap_server mapping: 
+  Listens to incoming PointCloud2 data and incrementally builds an octomap. 
+  The data is sent out in different representations. 
+	RED：X GREEN：Y BLUE：Z
+-->
+<launch>	
+	<node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 /map /pointCloud 70" />​
+</launch>
+```
+
+SG-SLAM/src/sg-slam/src/pointcloudmapping.cc
+
+```c++
+void PointCloudMapping::MapViewer()
+{
+    std::cout<<"start viewer."<< std::endl;
+    ros::NodeHandle nh;
+    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/SG_SLAM/Point_Clouds",100);
+    marker_publisher= nh.advertise<visualization_msgs::Marker>("/SG_SLAM/Semantic_Objects",100);
+//…………omitted here
+// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+            cube_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            cube_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+//…………omitted here
+            text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
+            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
+            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
+```
+
+The parameters of the two files here are for adjusting the display effect of the map, and they are all static transformations.
+
+For example "text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;" and "cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id]. centroid[1]+0.8; "
+
+**The "+0.8" in the code **means that the coordinates of the 3D object to be released are consistent with the rviz octree map coordinates.
+
+You can adjust this parameter to test the effect yourself. In order to understand its role and change the parameters that suit you.
+
+### 5.4 dynamic feature processing code
+
+The code is located in the RmDynamicPointWithMultiviewGeometry function of Frame.cc
+
