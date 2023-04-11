@@ -10,7 +10,9 @@ We performed an experimental evaluation on the TUM dataset, the Bonn dataset, an
 
 （For the Chinese version, see the README-zh.md file in the directory）
 
-（中文版本见目录下README-zh.md文件）
+（**中文版本见目录下README-zh.md文件**）
+
+
 
 ![sg-slam](./doc/sg-slam-system-overview.png)
 
@@ -169,7 +171,8 @@ cd SG-SLAM/src/octomap_server/launch
 roslaunch octomap.launch
 #terminal 3
 roslaunch transform.launch
-#terminal 4，you can use my rviz configuration file（like the command below）, its path is located in SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz, This will subscribe to some map-published topics directly in rviz.Of course, you can also open rviz directly, and then manually subscribe to the related topic.
+#terminal 4，you can use my rviz configuration file（like the command below）, its path is located in SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz, This will subscribe to some map-published topics directly in rviz.
+#Of course, you can also open rviz directly, and then manually subscribe to the related topic.
 rviz -d SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz
 #terminal 5
 cd SG-SLAM/src/sg-slam/
@@ -178,7 +181,7 @@ cd SG-SLAM/src/sg-slam/
 
 ## 4. Reference Project
 
-**Including but not limited to the following repositories  (In no particular order) : **
+**Including but not limited to the following repositories  (In no particular order)**
 
 - https://github.com/raulmur/ORB_SLAM2
 - https://github.com/ivipsourcecode/DS-SLAM
@@ -201,7 +204,7 @@ cd SG-SLAM/src/sg-slam/
 
 This file is used to start the octomap_server node and configure some parameters. You can see what these parameters mean here(http://wiki.ros.org/octomap_server、https://octomap.github.io/)
 
-Among them, the **param name="resolution"**parameter indicates the voxel resolution of the octomap. The smaller the parameter, the finer the map voxel segmentation and the higher the resolution. But the processing time and computational complexity also increase.
+Among them, the **param name=resolution** parameter indicates the voxel resolution of the octomap. The smaller the parameter, the finer the map voxel segmentation and the higher the resolution. But the processing time and computational complexity also increase.
 
 The **occupancy_min_z** and **occupancy_max_z** parameters can selectively pass through the point cloud within the z-axis range. If your initial camera view is parallel to the ground, you can also use the occupancy_min_z parameter to do a trick to filter out the ground. Similarly, the occupancy_min_z parameter can be used to filter out the top voxels of the house.
 
@@ -315,7 +318,7 @@ The parameters of the two files here are for adjusting the display effect of the
 
 For example "text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;" and "cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id]. centroid[1]+0.8; "
 
-**The "+0.8" in the code **means that the coordinates of the 3D object to be released are consistent with the rviz octree map coordinates.
+**The +0.8 in the code** means that the coordinates of the 3D object to be released are consistent with the rviz octree map coordinates. The parameter 0.8 is because my camera's initial pose is 0.8m above the ground
 
 You can adjust this parameter to test the effect yourself. In order to understand its role and change the parameters that suit you.
 

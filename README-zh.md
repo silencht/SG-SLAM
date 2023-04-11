@@ -327,7 +327,7 @@ void PointCloudMapping::MapViewer()
 
 例如“text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;” 和“cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;”
 
-**代码中的“+0.8”**表示要释放的3D物体坐标与rviz八叉树地图坐标一致。
+**代码中的“+0.8”**表示要释放的3D物体坐标与rviz八叉树地图坐标一致。参数0.8是因为我的相机初始位姿距离地面高0.8m。
 
 您可以调整此参数以测试效果， 以便了解它的作用并更改为适合您的参数。
 
