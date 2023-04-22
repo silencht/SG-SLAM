@@ -53,7 +53,7 @@ class Map;
 class LocalMapping;
 class LoopClosing;
 class System;
-class Detecting;
+class Detector2D;
 
 class Tracking
 {  
@@ -61,7 +61,7 @@ class Tracking
 public:
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Map* pMap,
              KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor ,
-             boost::shared_ptr<PointCloudMapping> pPointCloud);
+             boost::shared_ptr<PointCloudMapping> pPointCloudMapper);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
@@ -72,11 +72,11 @@ public:
     void SetLoopClosing(LoopClosing* pLoopClosing);
     void SetViewer(Viewer* pViewer);
 
-    void SetDetector(Detecting* Detector);
+    void SetDetector2D(Detector2D* Detector2d);
     void GetNewImage(const cv::Mat& img);
     bool isDetectImageFinished();
     bool mbDetectImageFinishedFlag;
-    Detecting* mpDetector;
+    Detector2D* mpDetector2d;
 
     // Load new settings
     // The focal lenght should be similar or scale prediction will fail when projecting points
@@ -229,7 +229,7 @@ protected:
     bool mbRGB;
 
     // For point cloud viewing
-    boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
+    boost::shared_ptr<PointCloudMapping> mpPointCloudMapper;
 
     list<MapPoint*> mlpTemporalPoints;
 };

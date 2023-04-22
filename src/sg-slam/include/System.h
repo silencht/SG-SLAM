@@ -38,7 +38,7 @@
 #include "Detector2D.h"
 #include <unistd.h>
 #include "boost/make_shared.hpp"
-#include "pointcloudmapping.h"
+#include "PointcloudMapping.h"
 
 class PointCloudMapping;
 
@@ -50,7 +50,7 @@ class Map;
 class Tracking;
 class LocalMapping;
 class LoopClosing;
-class Detecting;
+class Detector2D;
 
 class System
 {
@@ -129,8 +129,10 @@ public:
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
     // Detecting
-    Detecting* mpDetector;
+    Detector2D* mpDetector2d;
     std::thread* mptDetecting;
+    int is_global_pc_reconstruction;
+    inline boost::shared_ptr<PointCloudMapping> GetPointCloudMapper(){return mpPointCloudMapper;};
 
 private:
 
@@ -186,7 +188,7 @@ private:
     std::mutex mMutexState;
 
     // point cloud mapping
-    boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
+    boost::shared_ptr<PointCloudMapping> mpPointCloudMapper;
 };
 
 }// namespace ORB_SLAM

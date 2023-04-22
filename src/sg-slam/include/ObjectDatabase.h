@@ -9,16 +9,16 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 
-// 目标语义信息
+
 typedef struct SemanticObject
 {
  Eigen::Vector3f size;    
  Eigen::Vector3f centroid;
  float prob;              
- std::string object_name; // 物体类别名
- int class_id;           
+ std::string object_name;
+ int class_id;        
  int object_id;
- bool operator ==(const std::string &x);
+ bool operator ==(const std::string &name);
 } SemanticObject;
 
 
@@ -31,13 +31,14 @@ public:
     cv::Scalar  getObjectColor(int class_id);
     float getObjectSize(int class_id);
 
-    std::vector<SemanticObject>  getObjectByName(std::string objectName);
-    std::vector<SemanticObject> mvSemanticObject;
+    inline SemanticObject& getObjectByID(uint64_t id){return mvSemanticObject[id];}
     inline int getDataBaseSize(){return DataBaseSize;}
-protected:
+    
+private:
+    std::vector<SemanticObject>  mvSemanticObject;
     std::vector<cv::Scalar> mvColors;
     std::vector<float>      mvSizes;
-    uint16_t DataBaseSize;
+    uint64_t DataBaseSize;
 };
 
 #endif // OBJECTDATABASE_H

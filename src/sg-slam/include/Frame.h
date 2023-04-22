@@ -62,7 +62,7 @@ public:
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat &im);//default version
-    int  RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray);
+    int  RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray);
     bool CheckEpiLineDistToRmDynamicPoint(const cv::KeyPoint &kp1,const cv::Point2f &kp2, cv::Mat &F12
                                          ,const double threshold = 1.0);
     bool isInDynamicRegion(const cv::KeyPoint &kp);
@@ -106,8 +106,9 @@ public:
 
 public:
     Tracking* mpTracker;
-    std::vector<Object2D> mvObject2D;
+    std::vector<Object2D> mvObjects2D;
     bool mbHaveDynamicObject;
+    
     // Vocabulary used for relocalization.
     ORBVocabulary* mpORBvocabulary;
 

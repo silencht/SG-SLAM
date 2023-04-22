@@ -174,12 +174,10 @@ void FrameDrawer::Update(Tracking *pTracker)
     unique_lock<mutex> lock(mMutex);
     pTracker->mImRGB.copyTo(mIm);
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
- //   mvCurrentKeys=pTracker->mCurrentFrame.mvKeys_TEST_DYNAMIC;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
-
 
     if(pTracker->mLastProcessedState==Tracking::NOT_INITIALIZED)
     {

@@ -20,14 +20,13 @@
 
 #include "Viewer.h"
 #include <pangolin/pangolin.h>
-
 #include <mutex>
 
 namespace ORB_SLAM2
 {
 
-Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath):
-    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
+Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, Detector2D *pObject2d, const string &strSettingPath):
+    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),mpDetector2d(pObject2d),
     mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false)
 {
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
@@ -136,8 +135,10 @@ void Viewer::Run()
 
         pangolin::FinishFrame();
 
-        cv::Mat im = mpFrameDrawer->DrawFrame();
-        cv::imshow("SG-SLAM: Current Frame",im);
+        image_to_show = mpFrameDrawer->DrawFrame();
+        mpDetector2d->draw_objects(image_to_show); //draw object boundingbox
+
+        cv::imshow("SG-SLAM: Current Frame",image_to_show);
         cv::waitKey(mT);
 
         if(menuReset)

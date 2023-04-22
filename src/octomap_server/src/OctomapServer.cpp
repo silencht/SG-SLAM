@@ -269,6 +269,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   pcl::fromROSMsg(*cloud, pc);
 
   tf::StampedTransform sensorToWorldTf;
+
   try {
     m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
   } catch(tf::TransformException& ex){

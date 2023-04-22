@@ -29,8 +29,6 @@ std::vector<cv::Point2f> Prepoint, Curpoint;
 std::vector<uchar> State;
 std::vector<float> Err;
 cv::Mat imGrayPre;
-extern std::vector<Object2D> vObjects;
-extern bool bHaveDynamicObject;
 
 namespace ORB_SLAM2
 {
@@ -125,6 +123,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+// For RGB-D
 Frame::Frame(Tracking* pTracker, cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth,Frame &F1)
     :mpTracker(pTracker),mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
@@ -153,7 +152,7 @@ Frame::Frame(Tracking* pTracker, cv::Mat &imGray, const cv::Mat &imDepth, const 
     cv::Mat  imGrayT = imGray;
     if(imGrayPre.data)
     {
-        RmDynamicPointWithMultiviewGeometry(imGrayPre,imGray);
+        RmDynamicPointWithSemanticAndGeometry(imGrayPre,imGray);
         std::swap(imGrayPre, imGrayT);
     }
     else
@@ -426,7 +425,7 @@ void Frame::ComputeBoW()
         mpORBvocabulary->transform(vCurrentDesc,mBowVec,mFeatVec,4);
     }
 }
-int Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray)
+int Frame::RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray)
 {
     //transform CurrentFrame's mvKeys to Currentpoint
     Curpoint.clear();
@@ -455,12 +454,14 @@ int Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const c
         auto it_pre = Prepoint.begin();
 
 //        std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-        while (!mpTracker->isDetectImageFinished()) {
+        while (!mpTracker->isDetectImageFinished()) 
+        {
             usleep(1);
         }
-        if (vObjects.size() > 0) {
-            mvObject2D = vObjects;
-            mbHaveDynamicObject = bHaveDynamicObject;
+        if (!mpTracker->mpDetector2d->mvObjects2D.empty()) 
+        {
+            this->mvObjects2D = mpTracker->mpDetector2d->mvObjects2D;
+            mbHaveDynamicObject = mpTracker->mpDetector2d->bHaveDynamicObject;
         }
 /*
         std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
@@ -569,8 +570,6 @@ int Frame::RmDynamicPointWithMultiviewGeometry(const cv::Mat &imGrayPre, const c
         {
             std::swap(mDescriptors, mDescriptors_Temp);
         }
-
-            //std::swap(mDescriptors, mDescriptors_Temp);
             
     }
 
@@ -603,13 +602,13 @@ bool Frame::isInDynamicRegion(const cv::KeyPoint &kp)
     float kp_x = kp.pt.x;
     float kp_y = kp.pt.y;
 
-    for(int i = 0; i < mvObject2D.size(); ++i)
+    for(int i = 0; i < mvObjects2D.size(); ++i)
     {
-        int class_id = mvObject2D[i].id;
+        int class_id = mvObjects2D[i].id;
         if (class_id == 15)
         {
-            if(kp_x > mvObject2D[i].rect.x && kp_x < mvObject2D[i].rect.x+mvObject2D[i].rect.width &&
-               kp_y > mvObject2D[i].rect.y && kp_y < mvObject2D[i].rect.y+mvObject2D[i].rect.height)
+            if(kp_x > mvObjects2D[i].rect.x && kp_x < mvObjects2D[i].rect.x+mvObjects2D[i].rect.width &&
+               kp_y > mvObjects2D[i].rect.y && kp_y < mvObjects2D[i].rect.y+mvObjects2D[i].rect.height)
             {
                 return true;
             }

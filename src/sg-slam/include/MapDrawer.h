@@ -38,8 +38,6 @@ public:
 
     Map* mpMap;
 
-    void DrawObject();
-
     void DrawMapPoints();
     void DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph);
     void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc);

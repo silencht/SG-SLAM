@@ -62,12 +62,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
        exit(-1);
     }
 
-    float resolution = fsSettings["PointCloudMapping.Resolution"];
-    cout << endl << "resolution is " << resolution << endl;
-
     //Load ORB Vocabulary：https://github.com/raulmur/ORB_SLAM2/pull/21/
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
-
     mpVocabulary = new ORBVocabulary();
 //    bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
     bool bVocLoad = false; // chose loading method based on file extension
@@ -93,15 +89,63 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
 
+    //Read parameters from yaml for PointCloudMapping and Detector3D
+    int is_map_construction_consider_dynamic = fsSettings["PointCloudMapping.is_map_construction_consider_dynamic"];
+    is_global_pc_reconstruction = fsSettings["PointCloudMapping.is_global_pc_reconstruction"];
+    int is_octo_semantic_map_construction      = fsSettings["PointCloudMapping.is_octo_semantic_map_construction"];
+    float camera_valid_depth_Min = fsSettings["PointCloudMapping.camera_valid_depth_Min"];
+    float camera_valid_depth_Max = fsSettings["PointCloudMapping.camera_valid_depth_Max"];
+    
+    float Sor_Local_MeanK = fsSettings["PointCloudMapping.Sor_Local_MeanK"];
+    double Sor_Local_StddevMulThresh = fsSettings["PointCloudMapping.Sor_Local_StddevMulThresh"];
+    float Voxel_Local_LeafSize = fsSettings["PointCloudMapping.Voxel_Local_LeafSize"];
+    
+    float Sor_Global_MeanK = fsSettings["PointCloudMapping.Sor_Global_MeanK"];
+    double Sor_Global_StddevMulThresh = fsSettings["PointCloudMapping.Sor_Global_StddevMulThresh"];
+    float Voxel_Global_LeafSize = fsSettings["PointCloudMapping.Voxel_Global_LeafSize"];
+    
+    float Detector3D_Sor_MeanK = fsSettings["Detector3D.Sor_MeanK"];
+    double Detector3D_Sor_StddevMulThresh = fsSettings["Detector3D.Sor_StddevMulThresh"];
+    float Detector3D_Voxel_LeafSize = fsSettings["Detector3D.Voxel_LeafSize"];
+    float Detect3D_EuclideanClusterTolerance = fsSettings["Detector3D.EuclideanClusterTolerance"];
+    int Detect3D_EuclideanClusterMinSize = fsSettings["Detector3D.EuclideanClusterMinSize"];
+    int Detect3D_EuclideanClusterMaxSize = fsSettings["Detector3D.EuclideanClusterMaxSize"];
+    float Detect3D_DetectSimilarCompareRatio = fsSettings["Detector3D.DetectSimilarCompareRatio"];
+    int global_pc_update_kf_threshold = fsSettings["Detector3D.global_pc_update_kf_threshold"];
 
-	 // Initialize pointcloud mapping
-    mpPointCloudMapping = boost::make_shared<PointCloudMapping>( resolution );
-
+    cout << endl << "is map construction consider dynamic: " << is_map_construction_consider_dynamic;
+    cout << endl << "is global pointcloud reconstruction: " << is_global_pc_reconstruction;
+    cout << endl << "is octomap semanticObject map construction: " << is_octo_semantic_map_construction;
+    cout << endl << "camera_valid_depth_Min is " << camera_valid_depth_Min;
+    cout << endl << "camera_valid_depth_Max is " << camera_valid_depth_Max;    
+    cout << endl << "Sor_Local_MeanK is " << Sor_Local_MeanK;
+    cout << endl << "Sor_Local_StddevMulThresh is " << Sor_Local_StddevMulThresh;
+    cout << endl << "Voxel_Local_LeafSize is " << Voxel_Local_LeafSize;
+    cout << endl << "Sor_Global_MeanK is " << Sor_Global_MeanK;
+    cout << endl << "Sor_Global_StddevMulThresh is " << Sor_Global_StddevMulThresh;
+    cout << endl << "Voxel_Global_LeafSize is " << Voxel_Global_LeafSize;
+    cout << endl << "Detector3D_Sor_MeanK is " << Detector3D_Sor_MeanK;
+    cout << endl << "Detector3D_Sor_StddevMulThresh is " << Detector3D_Sor_StddevMulThresh;
+    cout << endl << "Detector3D_Voxel_LeafSize is " << Detector3D_Voxel_LeafSize;
+    cout << endl << "Detect3D_EuclideanClusterTolerance is " << Detect3D_EuclideanClusterTolerance;
+    cout << endl << "Detect3D_EuclideanClusterMinSize is " << Detect3D_EuclideanClusterMinSize;
+    cout << endl << "Detect3D_EuclideanClusterMaxSize is " << Detect3D_EuclideanClusterMaxSize;
+    cout << endl << "Detect3D_DetectSimilarCompareRatio is " << Detect3D_DetectSimilarCompareRatio;
+    cout << endl << "global_pc_update_kf_threshold is " << global_pc_update_kf_threshold<<endl;
+	//Initialize pointcloud mapping
+    mpPointCloudMapper = boost::make_shared<PointCloudMapping>(is_global_pc_reconstruction,
+                is_octo_semantic_map_construction,is_map_construction_consider_dynamic,
+                camera_valid_depth_Min,camera_valid_depth_Max,Sor_Local_MeanK,Sor_Local_StddevMulThresh,
+                Voxel_Local_LeafSize,Sor_Global_MeanK,Sor_Global_StddevMulThresh,
+                Voxel_Global_LeafSize,Detector3D_Sor_MeanK,Detector3D_Sor_StddevMulThresh,Detector3D_Voxel_LeafSize,
+                Detect3D_EuclideanClusterTolerance,Detect3D_EuclideanClusterMinSize,
+                Detect3D_EuclideanClusterMaxSize,Detect3D_DetectSimilarCompareRatio,
+                global_pc_update_kf_threshold);
 
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor, mpPointCloudMapping);
+                             mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor, mpPointCloudMapper);
 
     //Initialize the Local Mapping thread and launch
     mpLocalMapper = new LocalMapping(mpMap, mSensor==MONOCULAR);
@@ -111,14 +155,20 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR);
     mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
+
+    //Read parameters from yaml for Detector2D
+    float detection_confidence_threshold = fsSettings["Detector2D.detection_confidence_threshold"];
+    cout << endl << "detection_confidence_threshold is " << detection_confidence_threshold << endl;
+    float dynamic_detection_confidence_threshold = fsSettings["Detector2D.dynamic_detection_confidence_threshold"];
+    cout << endl << "dynamic_detection_confidence_threshold is " << dynamic_detection_confidence_threshold << endl;
     //Initialize the Detecting thread and launch
-    mpDetector = new Detecting();
-    mptDetecting = new thread(&ORB_SLAM2::Detecting::Run, mpDetector);
+    mpDetector2d = new Detector2D(detection_confidence_threshold,dynamic_detection_confidence_threshold);
+    mptDetecting = new thread(&ORB_SLAM2::Detector2D::Run, mpDetector2d);
 
     //Initialize the Viewer thread and launch
     if(bUseViewer)
     {
-        mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
+        mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,mpDetector2d,strSettingsFile);
         mptViewer = new thread(&Viewer::Run, mpViewer);
         mpTracker->SetViewer(mpViewer);
     }
@@ -126,7 +176,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
     mpTracker->SetLoopClosing(mpLoopCloser);
-    mpTracker->SetDetector(mpDetector);
+    mpTracker->SetDetector2D(mpDetector2d);
 
     mpLocalMapper->SetTracker(mpTracker);
     mpLocalMapper->SetLoopCloser(mpLoopCloser);
@@ -134,7 +184,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLoopCloser->SetTracker(mpTracker);
     mpLoopCloser->SetLocalMapper(mpLocalMapper);
 
-    mpDetector->SetTracker(mpTracker);
+    mpDetector2d->SetTracker(mpTracker);
 }
 
 cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
@@ -327,6 +377,7 @@ void System::Shutdown()
 {
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
+    mpPointCloudMapper->shutdown();
     if(mpViewer)
     {
         mpViewer->RequestFinish();

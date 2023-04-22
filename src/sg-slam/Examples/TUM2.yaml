@@ -60,7 +60,7 @@ ORBextractor.minThFAST: 7
 Viewer.KeyFrameSize: 0.05
 Viewer.KeyFrameLineWidth: 1
 Viewer.GraphLineWidth: 0.9
-Viewer.PointSize:2
+Viewer.PointSize: 2
 Viewer.CameraSize: 0.08
 Viewer.CameraLineWidth: 3
 Viewer.ViewpointX: 0
@@ -68,4 +68,30 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
-PointCloudMapping.Resolution: 0.05
+PointCloudMapping.is_map_construction_consider_dynamic: 1
+
+PointCloudMapping.camera_valid_depth_Min: 0.5
+PointCloudMapping.camera_valid_depth_Max: 5.0
+
+PointCloudMapping.is_octo_semantic_map_construction: 0
+PointCloudMapping.Sor_Local_MeanK: 50
+PointCloudMapping.Sor_Local_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Local_LeafSize: 0.01
+
+PointCloudMapping.is_global_pc_reconstruction: 1
+PointCloudMapping.Sor_Global_MeanK: 50
+PointCloudMapping.Sor_Global_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Global_LeafSize: 0.01
+
+Detector3D.Sor_MeanK: 50
+Detector3D.Sor_StddevMulThresh: 1.0
+Detector3D.Voxel_LeafSize: 0.01
+Detector3D.EuclideanClusterTolerance: 0.02
+Detector3D.EuclideanClusterMinSize: 1000
+Detector3D.EuclideanClusterMaxSize: 30000
+Detector3D.DetectSimilarCompareRatio: 0.5
+Detector3D.global_pc_update_kf_threshold: 25
+
+Detector2D.detection_confidence_threshold: 0.95
+Detector2D.dynamic_detection_confidence_threshold: 0.1
+

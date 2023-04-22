@@ -39,14 +39,14 @@ typedef struct Object2D
 namespace ORB_SLAM2 {
 
     class Tracking;
-    class Detecting{
+    class Detector2D{
     public:
 
-        Detecting();
-        ~Detecting();
+        Detector2D(float detection_confidence_threshold_,float dynamic_detection_confidence_threshold_);
+        ~Detector2D();
 
-        void detect(const cv::Mat &bgr, std::vector<Object2D> &vobject2d);
-        void draw_objects(const cv::Mat &bgr, std::vector<Object2D> &vobject2d);
+        void detect(const cv::Mat &bgr);
+        void draw_objects(cv::Mat &bgr);
         void Run();
         void SetTracker(Tracking *pTracker);
         bool isNewImageArrived();
@@ -58,6 +58,10 @@ namespace ORB_SLAM2 {
         bool mbNewImageFlag;
         Tracking* mpTracker;
 
+        bool bHaveDynamicObject = false;
+        std::vector<Object2D> mvObjects2D;
+        std::vector<Object2D> mvObjects2D_to_View;
+
     private:
         const int target_size = 300;
         const float mean_vals[3] = {123.675f, 116.28f, 103.53f};
@@ -66,6 +70,9 @@ namespace ORB_SLAM2 {
         ncnn::Net *detect_net_ptr;
         ncnn::Mat *net_in_ptr;
         static const char *class_names[];
+
+        float detection_confidence_threshold = 0.98;
+        float dynamic_detection_confidence_threshold = 0.1;
     };
 
 }

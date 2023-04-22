@@ -1,7 +1,7 @@
 #include "ObjectDatabase.h"
 
-bool SemanticObject::operator ==(const std::string &x){
-    return(this->object_name == x);
+bool SemanticObject::operator ==(const std::string &name){
+    return(this->object_name == name);
 } 
 
 ObjectDatabase::ObjectDatabase()
@@ -11,20 +11,20 @@ ObjectDatabase::ObjectDatabase()
 
     for (int i = 0; i < 21; i++)
     {  
-       mvColors.push_back(cv::Scalar( i*10 + 40, i*10 + 40, i*10 + 40));
+       mvColors.push_back(cv::Scalar(255 * (1 - i)*(2 - i) / 2, 255 * i*(2 - i), 255 * i*(i - 1) / 2));
     }
-    mvColors[5] = cv::Scalar(255,0,255); // 瓶子 粉色
-    mvColors[9] = cv::Scalar(255,0,0);   // 椅子 蓝色
-    mvColors[15] = cv::Scalar(0,0,255);  // 人 红色
-    mvColors[20] = cv::Scalar(0,255,0);  // 显示器 绿色 
+    mvColors[5] = cv::Scalar(255,0,255); // bottle pink
+    mvColors[9] = cv::Scalar(255,0,0);   // chair  blue
+    mvColors[15] = cv::Scalar(0,0,255);  // people red
+    mvColors[20] = cv::Scalar(0,255,0);  // tvmonitor green
     
     for (int i = 0; i < 21; i++)  
     {
-      mvSizes.push_back(0.6);
+        mvSizes.push_back(0.6);
     }
-    mvSizes[5] = 0.2;   // 瓶子
-    mvSizes[9] = 1.0;   // 椅子
-    mvSizes[20] = 0.5;  // 显示器
+    mvSizes[5] = 0.2;   // bottle
+    mvSizes[9] = 1.0;   // chair
+    mvSizes[20] = 0.5;  // tvmonitor
 }
 
 ObjectDatabase::~ObjectDatabase()
@@ -40,27 +40,10 @@ float ObjectDatabase::getObjectSize(int class_id)
 {
    return mvSizes[class_id];
 }       
-// 返回数据库中 同名字的物体数据
-std::vector<SemanticObject>  ObjectDatabase::getObjectByName(std::string objectName)
-{
-    // 按名字查物体是否在数据库
-	std::vector<SemanticObject>::iterator iter   = mvSemanticObject.begin()-1;
-	std::vector<SemanticObject>::iterator it_end = mvSemanticObject.end();
-    std::vector<SemanticObject> sameName; 
-	while(true) 
-    {
-	    iter = find(++iter, it_end, objectName);
-	    if (iter != it_end )
-                sameName.push_back(*iter);
-	    else
-	        break;  
-	}
-    return sameName;
-}
 
 void ObjectDatabase::addObject(SemanticObject& cluster)
 {
-    // 1. 查看总数量,数据库为空直接加入
+    // 1. If the database is empty, it is added directly
     if(!mvSemanticObject.size())
     {
         DataBaseSize++;
@@ -70,7 +53,7 @@ void ObjectDatabase::addObject(SemanticObject& cluster)
     }
     else
     {
-        // 2. 数据库内已经存在物体了，查找新物体是否在数据库内已经存在
+        // 2. If object already exist in the database, check whether the new object already exists in the database
         std::vector<SemanticObject>::iterator iter   = mvSemanticObject.begin()-1;
         std::vector<SemanticObject>::iterator it_end = mvSemanticObject.end();
         std::vector<std::vector<SemanticObject>::iterator> likely_obj;
@@ -81,7 +64,7 @@ void ObjectDatabase::addObject(SemanticObject& cluster)
                     likely_obj.push_back(iter);
             else break;
         }
-        // 3. 如果没找到，则直接添加进数据库
+        // 3. If not, add it directly to the database
         std::vector<SemanticObject>::iterator best_close;
         float center_distance=100;
         if(!likely_obj.size())
@@ -93,29 +76,32 @@ void ObjectDatabase::addObject(SemanticObject& cluster)
         }
         else
         {
-            // 4. 遍例每一个同名字的物体，找到中心点最近的一个
+            // 4. Go through every object with the same name and find the nearest center
+            // Todo: The Kuhn－Munkres algorithm with various weight information such as
+            // color/size/position is used for matching
             for(unsigned int j=0; j<likely_obj.size(); j++)
             {
                 std::vector<SemanticObject>::iterator& temp_iter = likely_obj[j];
                 SemanticObject& temp_cluster = *temp_iter;
-                Eigen::Vector3f dis_vec = cluster.centroid - temp_cluster.centroid;// 中心点连接向量
+                Eigen::Vector3f dis_vec = cluster.centroid - temp_cluster.centroid;
                 float dist = dis_vec.norm();
                 if(dist < center_distance)
                 {
-                    center_distance = dist; // 最短的距离
-                    best_close      = temp_iter;// 对应的索引
+                    center_distance = dist; // Shortest distance
+                    best_close      = temp_iter;
                 }
             }
-            // 5. 如果距离小于物体尺寸，则认为是同一个空间中的同一个物体，更新数据库中该物体的信息
+            // 5. If the distance is less than the size of the object, 
+            // it is considered to be the same object in the same space, 
+            // and the information of the object is updated in the database(a simple mean filtering)
             if(center_distance < mvSizes[cluster.class_id])
             {
-                best_close->prob     = (best_close->prob + cluster.prob)/2.0; // 综合置信度
-                best_close->centroid = (best_close->centroid + cluster.centroid)/2.0; // 中心平均
-                best_close->size     = (best_close->size + cluster.size)/2.0; // 中心尺寸
+                best_close->prob     = (best_close->prob + cluster.prob)/2.0;
+                best_close->centroid = (best_close->centroid + cluster.centroid)/2.0;
+                best_close->size     = (best_close->size + cluster.size)/2.0;
             }
             else
             {
-            // 6. 如果距离超过物体尺寸则认为是不同位置的同一种物体，直接放入数据库
                 DataBaseSize++;
                 cluster.object_id = DataBaseSize;
                 mvSemanticObject.push_back(cluster);

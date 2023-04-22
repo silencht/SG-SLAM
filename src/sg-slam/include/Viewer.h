@@ -36,11 +36,12 @@ class Tracking;
 class FrameDrawer;
 class MapDrawer;
 class System;
+class Detector2D;
 
 class Viewer
 {
 public:
-    Viewer(System* pSystem, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Tracking *pTracking, const string &strSettingPath);
+    Viewer(System* pSystem, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Tracking *pTracking, Detector2D *pObject2d, const string &strSettingPath);
 
     // Main thread function. Draw points, keyframes, the current camera pose and the last processed
     // frame. Drawing is refreshed according to the camera fps. We use Pangolin.
@@ -64,6 +65,7 @@ private:
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
     Tracking* mpTracker;
+    Detector2D* mpDetector2d;
 
     // 1/fps in ms
     double mT;
@@ -80,6 +82,8 @@ private:
     bool mbStopped;
     bool mbStopRequested;
     std::mutex mMutexStop;
+
+    cv::Mat image_to_show;
 
 };
 

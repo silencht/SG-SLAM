@@ -46,7 +46,7 @@ namespace ORB_SLAM2
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor,  boost::shared_ptr<PointCloudMapping> pPointCloud):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys), mpViewer(NULL),
-    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0), mpPointCloudMapping( pPointCloud )
+    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0), mpPointCloudMapper( pPointCloud )
 {
     // Load camera parameters from settings file
 
@@ -280,14 +280,14 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
-void Tracking::SetDetector(Detecting* Detector)
+void Tracking::SetDetector2D(Detector2D* Detector2d)
 {
-    mpDetector = Detector;
+    mpDetector2d = Detector2d;
 }
 
 bool Tracking::isDetectImageFinished()
 {
-    std::unique_lock <std::mutex> lock(mpDetector->mMutexImageDetectFinished);
+    std::unique_lock <std::mutex> lock(mpDetector2d->mMutexImageDetectFinished);
     if(mbDetectImageFinishedFlag)
     {
         mbDetectImageFinishedFlag=false;
@@ -301,10 +301,11 @@ bool Tracking::isDetectImageFinished()
 
 void Tracking::GetNewImage(const cv::Mat& img)
 {
-    unique_lock<mutex> lock(mpDetector->mMutexGetNewImage);
-    mpDetector->mbNewImageFlag=true;
-    img.copyTo(mpDetector->mImageToDetect);
+    unique_lock<mutex> lock(mpDetector2d->mMutexGetNewImage);
+    mpDetector2d->mbNewImageFlag=true;
+    img.copyTo(mpDetector2d->mImageToDetect);
 }
+
 void Tracking::Track()
 {
     if(mState==NO_IMAGES_YET)
@@ -454,9 +455,9 @@ void Tracking::Track()
             mState = OK;
         else
             mState=LOST;
+
         // Update drawer
         mpFrameDrawer->Update(this);
-
         // If tracking were good, check if we insert a keyframe
         if(bOK)
         {
@@ -1251,8 +1252,8 @@ void Tracking::CreateNewKeyFrame()
 
     mpLocalMapper->SetNotStop(false);
 
-    // insert Key Frame into point cloud viewer
-    mpPointCloudMapping->insertKeyFrame( pKF,this->mImRGB, this->mImDepth);
+    // insert Key Frame into pointcloud viewer
+    mpPointCloudMapper->insertKeyFrame(pKF,this->mImRGB,this->mImDepth);
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;

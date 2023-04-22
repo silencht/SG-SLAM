@@ -29,6 +29,7 @@
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
 #include "Detector2D.h"
+#include <ros/ros.h> // for ros::time
 
 #include <mutex>
 
@@ -191,7 +192,9 @@ public:
 
     cv::Mat mImRGB;//for pointcloudmapping
     cv::Mat mImDep;//for pointcloudmapping
-    std::vector<Object2D> mvObject2D;
+    std::vector<Object2D> mvObjects2D;
+    bool mbHaveDynamicObject;
+    ros::Time ros_time;
 
 
     // The following variables need to be accessed trough a mutex to be thread safe.
@@ -236,6 +239,7 @@ protected:
     std::mutex mMutexPose;
     std::mutex mMutexConnections;
     std::mutex mMutexFeatures;
+
 };
 
 } //namespace ORB_SLAM
