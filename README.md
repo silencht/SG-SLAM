@@ -8,6 +8,10 @@ In this paper, we propose SG-SLAM, which is a real-time RGB-D semantic visual SL
 
 We performed an experimental evaluation on the TUM dataset, the Bonn dataset, and the OpenLORIS-Scene dataset. The results show that SG-SLAM is not only one of the most real-time, accurate, and robust systems in dynamic scenes, but also allows the creation of intuitive semantic metric maps.
 
+【BiliBili】[VIDEO](https://www.bilibili.com/video/BV1nm4y1y7Ar)
+
+【Youtube】[VIDEO](https://youtu.be/16w_4NRFCdY)
+
 （For the Chinese version, see the README-zh.md file in the directory）
 
 （**中文版本见目录下README-zh.md文件**）
@@ -167,15 +171,13 @@ Put the [TUM dataset](https://vision.in.tum.de/data/datasets/rgbd-dataset/downlo
 #terminal 1
 roscore
 #terminal 2
-cd SG-SLAM/src/octomap_server/launch
+cd your_sg-slam_path/src/octomap_server/launch
 roslaunch octomap.launch
-#terminal 3
-roslaunch transform.launch
-#terminal 4，you can use my rviz configuration file（like the command below）, its path is located in SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz, This will subscribe to some map-published topics directly in rviz.
+#terminal 3，you can use my rviz configuration file（like the command below）, its path is located in your_sg-slam_path/src/sg-slam/Examples/rvizconfig.rviz, This will subscribe to some map-published topics directly in rviz.
 #Of course, you can also open rviz directly, and then manually subscribe to the related topic.
-rviz -d SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz
-#terminal 5
-cd SG-SLAM/src/sg-slam/
+rviz -d your_sg-slam_path/src/sg-slam/Examples/rvizconfig.rviz
+#terminal 4
+cd your_sg-slam_path/src/sg-slam/
 ./run_tum_walking_xyz.sh
 ```
 
@@ -194,6 +196,11 @@ cd SG-SLAM/src/sg-slam/
 - https://github.com/bijustin/Fast-Dynamic-ORB-SLAM
 - https://github.com/halajun/VDO_SLAM
 - https://github.com/Quitino/IndoorMapping
+- https://github.com/ninedayhx/orb_slam2_ros_dense_map
+- https://github.com/lturing/ORB_SLAM3_ROS
+- https://github.com/IATBOMSW/ORB-SLAM2_DENSE
+- https://github.com/xiaobainixi/ORB-SLAM2_RGBD_DENSE_MAP
+- https://github.com/laavanyebahl/3D-Object-Detection-with-Point-Clouds
 - ...
 
 ## 5. Other
@@ -251,13 +258,7 @@ SG-SLAM/src/sg-slam/Examples/TUM1.yaml
 
 ……
 
-The last line in the camera configuration parameter file also has a resolution parameter **PointCloudMapping.Resolution**
-
-It can be seen from the code when System.cc reads the yaml configuration file that this parameter is finally passed to the Voxel filter object constructor in the **PointCloudMapping** class.
-
-This parameter is finally passed to the **voxel filter object**, which is the resolution used for voxel filtering on the point cloud after the depth map is transformed into a 3D point cloud. Because the number of 3D point clouds directly converted from the depth map is large (640*480), the calculation burden is heavy, so filtering is performed. The resolution of the voxel filter is similar to that of the octomap, that is, the centroid of the same position is replaced, so that the amount of calculation is reduced. 
-
-After my test, it is generally set to 0.01 on my device, and the calculation efficiency and effect have reached a good balance. Adjustable to individual hardware.
+The following parameter items have been newly added to the imager configuration parameters file, and the roles of these parameters are described in turn later.
 
 ```yaml
 %YAML:1.0
@@ -273,56 +274,102 @@ Camera.fy: 575.994771
 # Viewer Parameters
 #--------------------------------------------------------------------------------------------
 Viewer.KeyFrameSize: 0.05
-…………omitted here
+…………omitted above
 
-PointCloudMapping.Resolution: 0.01
+PointCloudMapping.is_map_construction_consider_dynamic: 0
+
+PointCloudMapping.camera_valid_depth_Min: 0.5
+PointCloudMapping.camera_valid_depth_Max: 5.0
+
+PointCloudMapping.is_octo_semantic_map_construction: 0
+PointCloudMapping.Sor_Local_MeanK: 50
+PointCloudMapping.Sor_Local_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Local_LeafSize: 0.01
+
+PointCloudMapping.is_global_pc_reconstruction: 1
+PointCloudMapping.Sor_Global_MeanK: 50
+PointCloudMapping.Sor_Global_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Global_LeafSize: 0.01
+
+Detector3D.Sor_MeanK: 50
+Detector3D.Sor_StddevMulThresh: 1.0
+Detector3D.Voxel_LeafSize: 0.01
+Detector3D.EuclideanClusterTolerance: 0.02
+Detector3D.EuclideanClusterMinSize: 1000
+Detector3D.EuclideanClusterMaxSize: 30000
+Detector3D.DetectSimilarCompareRatio: 0.1
+Detector3D.global_pc_update_kf_threshold: 30
+
+Detector2D.detection_confidence_threshold: 0.985
+Detector2D.dynamic_detection_confidence_threshold: 0.1
 ```
 
-### 5.3 Object Position
+- PointCloudMapping.is_map_construction_consider_dynamic
 
-/SG-SLAM/src/octomap_server/launch/octomap.launch
+When performing octomap or 3D point cloud map builds, dynamic objects in the map can affect the quality of the map build. When this parameter is set to 1, the map will be built with dynamic objects excluded as much as possible (the code implementation is to exclude pedestrians), i.e., no dynamic objects will be built in map. If there is no dynamic object class in scenes, this parameter can be set to 0.
 
-```xml
-<!-- 
-  Example launch file for octomap_server mapping: 
-  Listens to incoming PointCloud2 data and incrementally builds an octomap. 
-  The data is sent out in different representations. 
-	RED：X GREEN：Y BLUE：Z
--->
-<launch>	
-	<node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 /map /pointCloud 70" />​
-</launch>
-```
+- PointCloudMapping.camera_valid_depth_Min and PointCloudMapping.camera_valid_depth_Max
 
-SG-SLAM/src/sg-slam/src/pointcloudmapping.cc
+RGB-D depth cameras have effective observation range limits for depth image data due to hardware and principle limitations. These two parameters are used to limit the effective value range of the depth image. They can be adjusted according to the camera model, and the default effective range here is 0.5 m to 5 m.
 
-```c++
-void PointCloudMapping::MapViewer()
-{
-    std::cout<<"start viewer."<< std::endl;
-    ros::NodeHandle nh;
-    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/SG_SLAM/Point_Clouds",100);
-    marker_publisher= nh.advertise<visualization_msgs::Marker>("/SG_SLAM/Semantic_Objects",100);
-//…………omitted here
-// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-            cube_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
-            cube_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
-            cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
-//…………omitted here
-            text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
-            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
-            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
-```
+- PointCloudMapping.is_octo_semantic_map_construction
 
-The parameters of the two files here are for adjusting the display effect of the map, and they are all static transformations.
+Whether to build octomap and semantic object metric map, 1 is to build, 0 is not to build.
 
-For example "text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;" and "cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id]. centroid[1]+0.8; "
+- PointCloudMapping.Sor_Local_MeanK，PointCloudMapping.Sor_Local_StddevMulThresh and PointCloudMapping.Voxel_Local_LeafSize
 
-**The +0.8 in the code** means that the coordinates of the 3D object to be released are consistent with the rviz octree map coordinates. The parameter 0.8 is because my camera's initial pose is 0.8m above the ground
+If is_octo_semantic_map_construction is set to 1, namely, octomap will be constructed. these three parameters function as filter setting parameters for filtering the 3D point cloud obtained from the camera depth image conversion.
 
-You can adjust this parameter to test the effect yourself. In order to understand its role and change the parameters that suit you.
+Take Voxel_Local_LeafSize as an example :
 
-### 5.4 dynamic feature processing code
+It can be seen from the code when System.cc reads the yaml configuration file that this parameter is finally passed to the Voxel filter object constructor in the **PointCloudMapping** class.
 
-The code is located in the RmDynamicPointWithMultiviewGeometry function of Frame.cc
+This parameter is finally passed to the **voxel filter object**, which is the resolution used for voxel filtering on the point cloud after the depth map is transformed into a 3D point cloud. Because the number of 3D point clouds directly converted from the depth map is large (640*480), the calculation burden is heavy, so filtering is performed. The resolution of the voxel filter is similar to that of the octomap, that is, the centroid of the same position is replaced, so that the amount of calculation is reduced. 
 
+After my test, it is generally set to 0.01 on my device, and the calculation efficiency and effect have reached a good balance. Adjustable to individual hardware.
+
+- PointCloudMapping.is_global_pc_reconstruction
+
+Whether to perform 3D point cloud map reconstruction, 1 is to do it, 0 is not to do it. Since map construction requires a significant computational cost, it is generally recommended that this parameter and the PointCloudMapping.is_octo_semantic_map_construction parameter not be turned on at the same time.
+
+- PointCloudMapping.Sor_Global_MeanK, PointCloudMapping.Sor_Global_StddevMulThresh and PointCloudMapping.Voxel_Global_LeafSize
+
+these parameters work similarly to parameters like PointCloudMapping.Sor_Local_MeanK.
+
+- Detector3D.Sor_MeanK, Detector3D.Sor_StddevMulThresh and Detector3D.Voxel_LeafSize
+
+These parameters act similar to parameters like PointCloudMapping.Sor_Local_MeanK. They are the parameters for filtering the point cloud clusters in the detection frame when acquiring 3D semantic objects. The following parameters of the Euclidean clustering settings are also used to extract the point cloud clusters of the target objects as accurately as possible.
+
+- Detector3D.EuclideanClusterTolerance, Detector3D.EuclideanClusterMinSize, Detector3D.EuclideanClusterMaxSize
+
+The setting parameters for Euclidean clustering segmentation of the point clouds in the object detection boundingbox. The purpose is to segment the point cloud of the target object among the point clouds in the detection frame as accurately as possible.
+
+- Detector3D.DetectSimilarCompareRatio
+
+The ratio parameter for filtering when finding the similarity match between a point cloud cluster and its target object. The effect is similar to that of the **mfNNratio** variable when performing bag-of-words matching in ORB-SLAM2. The smaller this value is, the more stringent the screening is.
+
+- Detector3D.global_pc_update_kf_threshold
+
+Functions such as global 3D point cloud map filtering and publishing in real time are very computationally intensive, so normally only each frame of the point cloud is processed and added to the global map. Only when the system is idle (no new keyframes in the buffer queue) or when the number of processed keyframes exceeds the current threshold parameter will the global point cloud filtering and publishing operations be performed.
+
+- Detector2D.detection_confidence_threshold
+
+A confidence threshold for detecting common objects, and a detection result is considered credible only if it is higher than this threshold. A low setting of this threshold may cause the semantic object metric map to detect the wrong target. Setting it too high may result in difficulty in acquiring some targets that are not easily discernible. Therefore it needs to be set according to the environment. There is a strong relationship with the current detection model.
+
+- Detector2D.dynamic_detection_confidence_threshold
+
+Confidence threshold when detecting dynamic objects, and the detection result is considered credible only if it is higher than this threshold. The reason for this threshold being set low is that dynamic objects have a greater negative impact on system tracking and map building. Therefore the detection results of dynamic objects need to be trusted as much as possible.
+
+### 5.3 dynamic feature processing code
+
+The code is located in the **RmDynamicPointWithSemanticAndGeometry** function of Frame.cc
+
+### 5.4 octomap_server partial map "disappearance" problem
+
+The problem that some octree maps would "disappear" when Octomap built a map in the last version has been solved (rewritten the code of topic publishing function for point cloud and tf information).
+
+Specific problem descriptions can be found at,
+
+https://answers.ros.org/question/224488/octomap-decreasing-probabilities-when-obstacle-is-not-there-anymore/
+
+https://answers.ros.org/question/51837/octomap_server-globally-referenced-pointcloud-and-transform/

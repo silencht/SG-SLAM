@@ -8,6 +8,12 @@ SG-SLAM是一个基于[ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2)框架的
 
 在TUM数据集、波恩数据集和OpenLORIS-Scene数据集进行了实验评估，结果表明SG-SLAM不仅是动态场景中非常实时、准确、鲁棒的系统之一，而且还可以创建直观的语义对象度量地图。
 
+【哔哩哔哩】[系统功能演示视频](https://www.bilibili.com/video/BV1nm4y1y7Ar)
+
+【Youtube】[系统功能演示视频](https://youtu.be/16w_4NRFCdY)
+
+
+
 ![sg-slam](./doc/sg-slam-system-overview-zh.png)
 
 **图1**. SG-SLAM系统框架。ORB-SLAM2的原始框架以水绿色背景呈现，新（或修改的）功能以红色背景呈现。
@@ -176,15 +182,12 @@ catkin_make --pkg sg-slam
 #terminal 1
 roscore
 #terminal 2 移动到octomap_server功能包下的launch目录下，该目录下有两个launch文件（octomap.launch，transform.launch），运行之。八叉树建图的各功能参数可在此配置
-cd SG-SLAM/src/octomap_server/launch
+cd your_sg-slam_path/src/octomap_server/launch
 roslaunch octomap.launch
-#terminal 3
-roslaunch transform.launch
-#terminal 4，你可以使用我的rviz配置文件（如下命令），它的路径位于SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz，这将直接在打开的rviz中订阅一些地图主题。当然，也可以直接打开rviz，然后手动订阅相关话题。
-rviz -d SG-SLAM/src/sg-slam/Examples/rvizconfig.rviz
-#terminal 5，运行tum数据集的walking_xyz序列。另外，也可运行硬件相机，如文件run_astra_pro_camera.sh
-#相机参数配置yaml文件最后一行PointCloudMapping.Resolution: 0.01参数意义为对点云进行体素滤波的分辨率值
-cd SG-SLAM/src/sg-slam/
+#terminal 3，你可以使用我的rviz配置文件（如下命令），它的路径位于your_sg-slam_path/src/sg-slam/Examples/rvizconfig.rviz，这将直接在打开的rviz中订阅一些地图主题。当然，也可以直接打开rviz，然后手动订阅相关话题。
+rviz -d your_sg-slam_path/src/sg-slam/Examples/rvizconfig.rviz
+#terminal 4，运行tum数据集的walking_xyz序列。另外，也可运行硬件相机，如文件run_astra_pro_camera.sh
+cd your_sg-slam_path/src/sg-slam/
 ./run_tum_walking_xyz.sh
 ```
 
@@ -203,6 +206,11 @@ cd SG-SLAM/src/sg-slam/
 - https://github.com/bijustin/Fast-Dynamic-ORB-SLAM
 - https://github.com/halajun/VDO_SLAM
 - https://github.com/Quitino/IndoorMapping
+- https://github.com/ninedayhx/orb_slam2_ros_dense_map
+- https://github.com/lturing/ORB_SLAM3_ROS
+- https://github.com/IATBOMSW/ORB-SLAM2_DENSE
+- https://github.com/xiaobainixi/ORB-SLAM2_RGBD_DENSE_MAP
+- https://github.com/laavanyebahl/3D-Object-Detection-with-Point-Clouds
 - ...
 
 ## 5. 其他
@@ -260,77 +268,99 @@ SG-SLAM/src/sg-slam/Examples/TUM1.yaml
 
 ……
 
-相机配置参数文件最后一行还有一个分辨率参数**PointCloudMapping.Resolution**
+相机配置参数文件新增了以下参数项，后面依次介绍这些参数的作用。
 
-从System.cc读取yaml配置文件时的代码可以看出，这个参数最终传递给了**PointCloudMapping**类中的Voxel滤镜对象构造函数。
+```yaml
+PointCloudMapping.is_map_construction_consider_dynamic: 0
 
-这个参数最后传给了**voxel filter object**，也就是深度图转化为3D点云后，对点云进行体素过滤所使用的分辨率。 因为深度图直接转换出来的3D点云数量非常多（640*480），计算负担大，所以需要进行过滤。 voxel filter的分辨率和octomap类似，就是用体素中所有点的重心来近似显示体素中其他点，从而减少计算量。
+PointCloudMapping.camera_valid_depth_Min: 0.5
+PointCloudMapping.camera_valid_depth_Max: 5.0
+
+PointCloudMapping.is_octo_semantic_map_construction: 0
+PointCloudMapping.Sor_Local_MeanK: 50
+PointCloudMapping.Sor_Local_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Local_LeafSize: 0.01
+
+PointCloudMapping.is_global_pc_reconstruction: 1
+PointCloudMapping.Sor_Global_MeanK: 50
+PointCloudMapping.Sor_Global_StddevMulThresh: 2.0
+PointCloudMapping.Voxel_Global_LeafSize: 0.01
+
+Detector3D.Sor_MeanK: 50
+Detector3D.Sor_StddevMulThresh: 1.0
+Detector3D.Voxel_LeafSize: 0.01
+Detector3D.EuclideanClusterTolerance: 0.02
+Detector3D.EuclideanClusterMinSize: 1000
+Detector3D.EuclideanClusterMaxSize: 30000
+Detector3D.DetectSimilarCompareRatio: 0.1
+Detector3D.global_pc_update_kf_threshold: 30
+
+Detector2D.detection_confidence_threshold: 0.985
+Detector2D.dynamic_detection_confidence_threshold: 0.1
+```
+
+- PointCloudMapping.is_map_construction_consider_dynamic
+
+进行octomap或三维点云地图构建时，地图中的动态对象会影响地图构建的质量。当此参数设置为1时，地图构建时将尽可能剔除动态对象（代码实现是剔除行人），即不对动态对象进行建图。如果场景中不存在动态对象类别，可将此参数设置为0。
+
+- PointCloudMapping.camera_valid_depth_Min and PointCloudMapping.camera_valid_depth_Max
+
+RGB-D深度相机因硬件、原理等限制，深度图像的数据存在有效的观测范围限制。这两个参数用来限制深度图像的有效数值范围。可根据相机型号进行调节，此处默认有效范围为0.5米到5米。
+
+- PointCloudMapping.is_octo_semantic_map_construction
+
+是否构建octomap和语义对象度量地图，1代表构建，0是不构建
+
+- PointCloudMapping.Sor_Local_MeanK，PointCloudMapping.Sor_Local_StddevMulThresh and PointCloudMapping.Voxel_Local_LeafSize
+
+如果is_octo_semantic_map_construction设置为1，即构建octomap。这三个参数的作用是对单帧深度图像转换得到的三维点云进行滤波的滤波器设置参数。
+
+以Voxel_Local_LeafSize为例，从System.cc读取yaml配置文件时的代码可以看出，这个参数最终传递给了**PointCloudMapping**类中的Voxel滤镜对象构造函数。这个参数最后传给了**voxel filter object**，也就是深度图转化为3D点云后，对点云进行体素过滤所使用的分辨率。 因为深度图直接转换出来的3D点云数量非常多（640*480），计算负担大，所以需要进行过滤。 voxel filter的分辨率和octomap类似，就是用体素中所有点的重心来近似显示体素中其他点，从而减少计算量。
 
 经过我的测试，在我的设备上一般设置为0.01，计算效率和效果达到了很好的平衡。 可针对个人硬件的不同对参数进行调整。
 
-```yaml
-%YAML:1.0
-#--------------------------------------------------------------------------------------------
-# Camera Parameters. Adjust them!
-#--------------------------------------------------------------------------------------------
-# Camera calibration and distortion parameters (OpenCV) 
-Camera.fx: 575.520619
-Camera.fy: 575.994771
-…………omitted here
+- PointCloudMapping.is_global_pc_reconstruction
 
-#--------------------------------------------------------------------------------------------
-# Viewer Parameters
-#--------------------------------------------------------------------------------------------
-Viewer.KeyFrameSize: 0.05
-…………omitted here
+是否进行三维点云地图重建，1是进行，0是不进行。由于地图构建需要不小的计算成本，因此一般建议此参数和PointCloudMapping.is_octo_semantic_map_construction参数不要同时开启。
 
-PointCloudMapping.Resolution: 0.01
-```
+- PointCloudMapping.Sor_Global_MeanK, PointCloudMapping.Sor_Global_StddevMulThresh and PointCloudMapping.Voxel_Global_LeafSize
 
-### 5.3 地图/对象位置
+这些参数的作用类似于PointCloudMapping.Sor_Local_MeanK等参数。
 
-/SG-SLAM/src/octomap_server/launch/octomap.launch
+- Detector3D.Sor_MeanK, Detector3D.Sor_StddevMulThresh and Detector3D.Voxel_LeafSize
 
-```xml
-<!-- 
-  Example launch file for octomap_server mapping: 
-  Listens to incoming PointCloud2 data and incrementally builds an octomap. 
-  The data is sent out in different representations. 
-	RED：X GREEN：Y BLUE：Z
--->
-<launch>	
-	<node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 /map /pointCloud 70" />​
-</launch>
-```
+这些参数的作用类似PointCloudMapping.Sor_Local_MeanK等参数。它们是获取3D语义对象时，对检测框内的点云团进行滤波处理的参数。下面的欧式聚类设置参数也是为了尽可能准确的提取目标对象的点云团。
 
-SG-SLAM/src/sg-slam/src/pointcloudmapping.cc
+- Detector3D.EuclideanClusterTolerance, Detector3D.EuclideanClusterMinSize, Detector3D.EuclideanClusterMaxSize
 
-```c++
-void PointCloudMapping::MapViewer()
-{
-    std::cout<<"start viewer."<< std::endl;
-    ros::NodeHandle nh;
-    pcl_publisher = nh.advertise<sensor_msgs::PointCloud2>("/SG_SLAM/Point_Clouds",100);
-    marker_publisher= nh.advertise<visualization_msgs::Marker>("/SG_SLAM/Semantic_Objects",100);
-//…………omitted here
-// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-            cube_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
-            cube_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
-            cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
-//…………omitted here
-            text_marker_to_publish.pose.position.x = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[2];
-            text_marker_to_publish.pose.position.y = -mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[0];
-            text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;
-```
+对对象检测框内的点云进行欧式聚类分割的设置参数。作用是为了尽可能准确的在检测框内的点云团中分割出目标对象的点云团。
 
-这里两个文件的参数是用来调整地图显示效果的，都是静态坐标变换。
+- Detector3D.DetectSimilarCompareRatio
 
-例如“text_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;” 和“cube_marker_to_publish.pose.position.z = mpDetector3D->mpObjectDatabase->mvSemanticObject[id].centroid[1]+0.8;”
+求点云团与其目标对象的相似匹配度时，进行筛选的比例参数。作用类似于ORB-SLAM2中进行Bow词袋匹配时的mfNNratio变量。此值越小，筛选就越严格。
 
-**代码中的“+0.8”**表示要释放的3D物体坐标与rviz八叉树地图坐标一致。参数0.8是因为我的相机初始位姿距离地面高0.8m。
+- Detector3D.global_pc_update_kf_threshold
 
-您可以调整此参数以测试效果， 以便了解它的作用并更改为适合您的参数。
+实时进行全局三维点云地图滤波和发布等功能十分消耗算力，因此平时只是处理每帧点云并添加到全局地图。只有在系统空闲（缓冲队列中没有新的关键帧）或处理的关键帧数量超过当前阈值参数时才会进行全局点云滤波和发布操作。
 
-### 5.4 动态特征剔除算法代码
+- Detector2D.detection_confidence_threshold
 
-代码位于Frame.cc，主要在RmDynamicPointWithMultiviewGeometry函数中
+检测普通对象时的置信度阈值，只有检测结果高于该阈值时，才认为检测结果可信。该阈值设置过低可能会造成语义对象度量地图检测到错误的目标。设置过高，可能会导致难以获取到一些不易辨别的目标。因此需根据环境进行设置。与当前检测模型有很大的关系。
+
+- Detector2D.dynamic_detection_confidence_threshold
+
+检测动态对象时的置信度阈值，只有检测结果高于该阈值时，才认为检测结果可信。此阈值设置较低的原因，是动态对象对系统跟踪和建图造成的负面影响较大。因此需要尽可能相信动态对象的检测结果。
+
+### 5.3 动态特征剔除算法代码
+
+代码位于Frame.cc，主要在第155行的RmDynamicPointWithSemanticAndGeometry函数中
+
+### 5.4 octomap_server 部分地图“消失”问题
+
+对于上个版本octomap建图时，部分八叉树地图会出现“消失”的问题已经解决（重写了点云和tf等信息的话题发布功能代码）。
+
+具体问题描述可参考：
+
+https://answers.ros.org/question/224488/octomap-decreasing-probabilities-when-obstacle-is-not-there-anymore/
+
+https://answers.ros.org/question/51837/octomap_server-globally-referenced-pointcloud-and-transform/
