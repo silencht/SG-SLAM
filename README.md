@@ -373,3 +373,5 @@ Specific problem descriptions can be found at,
 https://answers.ros.org/question/224488/octomap-decreasing-probabilities-when-obstacle-is-not-there-anymore/
 
 https://answers.ros.org/question/51837/octomap_server-globally-referenced-pointcloud-and-transform/
+
+https://zhuanlan.zhihu.com/p/625190273

@@ -364,3 +364,5 @@ RGB-D深度相机因硬件、原理等限制，深度图像的数据存在有效
 https://answers.ros.org/question/224488/octomap-decreasing-probabilities-when-obstacle-is-not-there-anymore/
 
 https://answers.ros.org/question/51837/octomap_server-globally-referenced-pointcloud-and-transform/
+
+https://zhuanlan.zhihu.com/p/625190273
