@@ -72,12 +72,12 @@ PointCloudMapping.is_map_construction_consider_dynamic: 0
 PointCloudMapping.camera_valid_depth_Min: 0.5
 PointCloudMapping.camera_valid_depth_Max: 5.0
 
-PointCloudMapping.is_octo_semantic_map_construction: 0
+PointCloudMapping.is_octo_semantic_map_construction: 1
 PointCloudMapping.Sor_Local_MeanK: 50
 PointCloudMapping.Sor_Local_StddevMulThresh: 2.0
 PointCloudMapping.Voxel_Local_LeafSize: 0.01
 
-PointCloudMapping.is_global_pc_reconstruction: 1
+PointCloudMapping.is_global_pc_reconstruction: 0
 PointCloudMapping.Sor_Global_MeanK: 50
 PointCloudMapping.Sor_Global_StddevMulThresh: 2.0
 PointCloudMapping.Voxel_Global_LeafSize: 0.01
@@ -91,7 +91,7 @@ Detector3D.EuclideanClusterMaxSize: 30000
 Detector3D.DetectSimilarCompareRatio: 0.1
 Detector3D.global_pc_update_kf_threshold: 30
 
-Detector2D.detection_confidence_threshold: 0.985
-Detector2D.dynamic_detection_confidence_threshold: 0.1
+Detector2D.detection_confidence_threshold: 0.99
+Detector2D.dynamic_detection_confidence_threshold: 0.05
 
 

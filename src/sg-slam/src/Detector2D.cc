@@ -45,22 +45,20 @@ namespace ORB_SLAM2 {
         ex.extract("detection_out", out);
 
         mvObjects2D.clear();
-        bHaveDynamicObject = false;
+        mbHaveDynamicObjectForMapping = false;
+        mbHaveDynamicObjectForRmDynamicFeature = false;
+        mvPotentialDynamicBorderForRmDynamicFeature.clear();
+        mvPotentialDynamicBorderForMapping.clear();
         for (int i = 0; i < out.h; i++) {
             const float *values = out.row(i);
-            //If the object confidence is greater than 0.98, 
+            //If the object confidence is greater than detection_confidence_threshold, 
             //or if currently object is human and its confidence is greater than 0.2.
-            //(values[1]>0.2  && int(values[0])==15) is good for dynamic feature culling
+            //(values[1]>0.2  && int(values[0])==15) is good for dynamic feature culling, but not good for mapping 
             if(values[1] > detection_confidence_threshold || (values[1] > dynamic_detection_confidence_threshold  && int(values[0]) == 15 )){
                 Object2D object2d;
                 object2d.id = int(values[0]);
                 object2d.name = std::string(class_names[int(values[0])]);
                 object2d.prob = values[1];
-                if(15 == object2d.id)
-                {
-                    bHaveDynamicObject = true;
-                    //std::cout<<"find person."<<std::endl;
-                }
 
                 float x1 = clamp(values[2] * target_size, 0.f, float(target_size - 1)) / target_size * img_w;
                 float y1 = clamp(values[3] * target_size, 0.f, float(target_size - 1)) / target_size * img_h;
@@ -73,7 +71,19 @@ namespace ORB_SLAM2 {
                 object2d.rect.height = y2 - y1;
 
                 mvObjects2D_to_View.push_back(object2d);
-                mvObjects2D.emplace_back(object2d);
+                if(15 == object2d.id)
+                {
+                    mbHaveDynamicObjectForMapping = true;
+                    mvPotentialDynamicBorderForMapping.emplace_back(object2d.rect);
+                    if(object2d.prob > 0.2)
+                    {
+                        mbHaveDynamicObjectForRmDynamicFeature = true;
+                        mvPotentialDynamicBorderForRmDynamicFeature.emplace_back(object2d.rect);
+                    }
+                    //std::cout<<"find person."<<std::endl;
+                }
+                else
+                    mvObjects2D.emplace_back(object2d);
             }
         }
     }

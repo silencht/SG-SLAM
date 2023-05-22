@@ -16,7 +16,7 @@ make -j4
 
 cd ../../
 
-echo "Configuring and building Thirdparty/ncnn ..."
+echo "building Thirdparty/ncnn ..."
 
 git clone https://github.com/Tencent/ncnn
 cd ncnn

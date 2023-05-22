@@ -60,7 +60,7 @@ private:
 
     // from https://github.com/Ewenwan/ORB_SLAM2_SSD_Semantic/blob/master/perfect/src/MergeSG.cc
     bool GetProjectedROI(const pcl::PointCloud<PointXYZPixel>::ConstPtr point_cloud,cv::Rect_<float> & roi);
-    float GetSimilarity(const cv::Rect_<float> & r1, const cv::Rect_<float> & r2, float depth, size_t points_num);
+    float GetSimilarity(const cv::Rect_<float> & r1, const cv::Rect_<float> & r2, size_t points_num);
     void PointCloudAddPixel(const PointCloud::ConstPtr orig, const std::vector<int>& indices,
                             pcl::PointCloud<PointXYZPixel>::Ptr dest);
 

@@ -74,22 +74,13 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr world_pc_ ,pcl::PointCloud<pcl::PointXYZR
     camera_pc_->height = pkf->mImDep.rows;
     camera_pc_->is_dense = false;//false if have points are invalid (e.g., have NaN or Inf values).
 
-    if(pkf->mbHaveDynamicObject)
+    if(pkf->mbHaveDynamicObjectForMapping)
     {
         semanticobj_pc_->resize(pkf->mImDep.rows * pkf->mImDep.cols);
         semanticobj_pc_->width = pkf->mImDep.cols;
         semanticobj_pc_->height = pkf->mImDep.rows;
         semanticobj_pc_->is_dense = false;
-        std::vector<cv::Rect_<float> > vDynamicBorder;
-
-        for(unsigned int i = 0; i < pkf->mvObjects2D.size(); i++)
-        {
-            if(15 == pkf->mvObjects2D[i].id)//is people
-            {
-                cv::Rect_<float> rect2d = pkf->mvObjects2D[i].rect;
-                vDynamicBorder.emplace_back(rect2d);
-            }
-        }
+        std::cout<<"????"<<std::endl;
         for (int m = 0; m < pkf->mImDep.rows; m++)
         {
             for (int n = 0; n < pkf->mImDep.cols; n++)
@@ -99,7 +90,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr world_pc_ ,pcl::PointCloud<pcl::PointXYZR
                 //notice: x is col, y is row,so there is (n,m),and not (m,n)
                 //if this point is in dynamic boundingbox
                 size_t index = m * pkf->mImDep.cols + n;
-                if(isInDynamicRegion(n,m,vDynamicBorder))
+                if(isInDynamicRegion(n,m,pkf->mvPotentialDynamicBorderForMapping))
                 {
                     semanticobj_pc_->points[index].z = d;
                     semanticobj_pc_->points[index].x = ( n - pkf->cx) * d / pkf->fx;
@@ -151,12 +142,12 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr world_pc_ ,pcl::PointCloud<pcl::PointXYZR
     pcl::transformPointCloud(*camera_pc_, *world_pc_, Twc.matrix());
 
     //3D Semantic Object Detect
-    if(pkf->mvObjects2D.size() > 0 && is_octo_semantic_map_construction && pkf->mbHaveDynamicObject)
+    if(pkf->mvObjects2D.size() > 0 && is_octo_semantic_map_construction && pkf->mbHaveDynamicObjectForMapping)
     {
         pcl::transformPointCloud(*semanticobj_pc_, *semanticobj_pc_, Twc.matrix());
         mpDetector3D->Detect(pkf->mvObjects2D,pkf->mImDep,semanticobj_pc_);
     }   
-    else if(pkf->mvObjects2D.size() > 0 && is_octo_semantic_map_construction && !pkf->mbHaveDynamicObject)
+    else if(pkf->mvObjects2D.size() > 0 && is_octo_semantic_map_construction && !pkf->mbHaveDynamicObjectForMapping)
         mpDetector3D->Detect(pkf->mvObjects2D,pkf->mImDep,world_pc_);
 
     //3D Global point cloud reconstrution

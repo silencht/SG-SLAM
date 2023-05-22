@@ -25,10 +25,12 @@
 #include <thread>
 
 // The previous image
-std::vector<cv::Point2f> Prepoint, Curpoint;
+std::vector<cv::Point2f> Prepoint,PrepointRmDynamic,Curpoint,CurpointRmDynamic;
 std::vector<uchar> State;
 std::vector<float> Err;
 cv::Mat imGrayPre;
+bool bPreFrameHavePotentialDynamicObj;
+std::vector<cv::Rect_<float> > vPreFramePotentialDynamicBorder;
 
 namespace ORB_SLAM2
 {
@@ -141,7 +143,7 @@ Frame::Frame(Tracking* pTracker, cv::Mat &imGray, const cv::Mat &imDepth, const 
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
 //    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    ExtractORB(0,imGray);//compute mvKeys与mDescriptors
+    ExtractORB(0,imGray);//compute mvKeys and mDescriptors
 /*
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     double tExtract= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
@@ -430,12 +432,13 @@ int Frame::RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const
     //transform CurrentFrame's mvKeys to Currentpoint
     Curpoint.clear();
     Prepoint.clear();
+    CurpointRmDynamic.clear();
+    PrepointRmDynamic.clear();
 
     for(auto it = mvKeys.begin(); it != mvKeys.end(); ++it)
     {
         Curpoint.push_back(it->pt);
     }
-    int keypoint_sum = Curpoint.size();
     //double mom = nmatches;
 
     //std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -445,39 +448,127 @@ int Frame::RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const
     double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
     std::cout << "calcOpticalFlow time =" << ttrack*1000 <<  std::endl;
     */
-
-    if(keypoint_sum>15)//防止findFundamentalMat因参数为空报错
+    int Cur_keypoint_sum = Curpoint.size();
+    int Pre_keypoint_sum;
+    cv::Mat FundMat;
+    if(bPreFrameHavePotentialDynamicObj)
     {
-        cv::Mat FundMat = cv::findFundamentalMat(Curpoint, Prepoint, cv::FM_RANSAC, 0.1, 0.9999);
-        int  offset = 0;
-        auto it_cur = mvKeys.begin();
-        auto it_pre = Prepoint.begin();
+        for(auto itc = Curpoint.begin(), itp = Prepoint.begin(); itp != Prepoint.end(); ++itc,++itp)
+        {
+            if(!isInDynamicRegion(*itp,vPreFramePotentialDynamicBorder))
+            {
+                CurpointRmDynamic.push_back(*itc);
+                PrepointRmDynamic.push_back(*itp);
+            }
+        }
+        Pre_keypoint_sum = PrepointRmDynamic.size();
+    }
+    else 
+        Pre_keypoint_sum = Prepoint.size();
 
-//        std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-        while (!mpTracker->isDetectImageFinished()) 
-        {
-            usleep(1);
-        }
-        if (!mpTracker->mpDetector2d->mvObjects2D.empty()) 
-        {
-            this->mvObjects2D = mpTracker->mpDetector2d->mvObjects2D;
-            mbHaveDynamicObject = mpTracker->mpDetector2d->bHaveDynamicObject;
-        }
+    if(Pre_keypoint_sum > 20 && bPreFrameHavePotentialDynamicObj)
+        FundMat = cv::findFundamentalMat(CurpointRmDynamic, PrepointRmDynamic, cv::FM_RANSAC, 1.0, 0.99);
+    else
+        FundMat = cv::findFundamentalMat(Curpoint, Prepoint, cv::FM_RANSAC, 1.0, 0.99);
+
+    int  offset = 0;
+    auto it_cur = mvKeys.begin();
+    auto it_pre = Prepoint.begin();
+    // std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
+    while (!mpTracker->isDetectImageFinished()) 
+    {
+        usleep(1);
+    }
+    if(!mpTracker->mpDetector2d->mvObjects2D.empty()) 
+    {
+        mvObjects2D = mpTracker->mpDetector2d->mvObjects2D;
+        mbHaveDynamicObjectForRmDynamicFeature = mpTracker->mpDetector2d->mbHaveDynamicObjectForRmDynamicFeature;
+        mbHaveDynamicObjectForMapping = mpTracker->mpDetector2d->mbHaveDynamicObjectForMapping;
+        //Record the dynamic information for previous frame
+        bPreFrameHavePotentialDynamicObj = mbHaveDynamicObjectForRmDynamicFeature;     
+    }
+    else
+        bPreFrameHavePotentialDynamicObj = false;
+    
+    if(mbHaveDynamicObjectForRmDynamicFeature)
+    {
+        mvPotentialDynamicBorderForRmDynamicFeature = mpTracker->mpDetector2d->mvPotentialDynamicBorderForRmDynamicFeature;
+        //Record the dynamic information for previous frame
+        vPreFramePotentialDynamicBorder = mvPotentialDynamicBorderForRmDynamicFeature;
+    }
+    if(mbHaveDynamicObjectForMapping)
+        mvPotentialDynamicBorderForMapping = mpTracker->mpDetector2d->mvPotentialDynamicBorderForMapping;
+    
 /*
-        std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
-        double tDetect= std::chrono::duration_cast<std::chrono::duration<double> >(t4 - t3).count();
-        std::cout << "DetectImage time =" << tDetect*1000 <<  std::endl;
+    std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
+    double tDetect= std::chrono::duration_cast<std::chrono::duration<double> >(t4 - t3).count();
+    std::cout << "DetectImage time =" << tDetect*1000 <<  std::endl;
 */
 
 
 /* version1: only detect object and remove in-object keypoints.
-        cv::Mat mDescriptors_Temp;
-        while (it_cur != mvKeys.end()) {
-            if (mbHaveDynamicObject && isInDynamicRegion(*it_cur))
+    cv::Mat mDescriptors_Temp;
+    while (it_cur != mvKeys.end()) {
+        if (mbHaveDynamicObjectForRmDynamicFeature && isInDynamicRegion(*it_cur,mvPotentialDynamicBorderForRmDynamicFeature))
+        {
+            mvKeys.erase(it_cur);
+            it_pre++;
+            Cur_keypoint_sum--;
+        }
+        else
+        {
+            mDescriptors_Temp.push_back(mDescriptors.row(offset));
+            it_cur++;
+            it_pre++;
+        }
+        offset++;
+    }
+    mDescriptors = mDescriptors_Temp;
+*/
+
+
+/*version2: only detect EpiLineDist and remove Dynamic keypoints.
+    cv::Mat mDescriptors_Temp;
+    std::vector<cv::KeyPoint> mvKeys_Temp = mvKeys;
+    while(it_cur != mvKeys.end())
+    {
+        if(!CheckEpiLineDistToRmDynamicPoint(*it_cur,*it_pre,FundMat,0.2))
+        {
+                mvKeys.erase(it_cur);
+                it_pre++;
+                Cur_keypoint_sum--;
+        }
+        else
+        {
+                mDescriptors_Temp.push_back(mDescriptors.row(offset));
+                it_cur++;
+                it_pre++;
+        }
+        offset++;
+    }
+    if(Cur_keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.1)
+    {
+        //std::cout<<"Cur_keypoint_sum: "<<Cur_keypoint_sum<<std::endl;
+        std::swap(mvKeys, mvKeys_Temp);
+    }
+    else
+        std::swap(mDescriptors, mDescriptors_Temp);
+
+*/
+
+// version3 : combine EpiLineDist and Object Detect ,if point is in ObjectReigion, increase EpiLineDist Thresh
+    cv::Mat mDescriptors_Temp;
+    std::vector<cv::KeyPoint> mvKeys_Temp = mvKeys;
+
+    while (it_cur != mvKeys.end())
+    {
+        if(mbHaveDynamicObjectForRmDynamicFeature && isInDynamicRegion(*it_cur,mvPotentialDynamicBorderForRmDynamicFeature))
+        {
+            if (!CheckEpiLineDistToRmDynamicPoint(*it_cur, *it_pre, FundMat, 0.2))
             {
                 mvKeys.erase(it_cur);
                 it_pre++;
-                keypoint_sum--;
+                Cur_keypoint_sum--;
             }
             else
             {
@@ -485,100 +576,39 @@ int Frame::RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const
                 it_cur++;
                 it_pre++;
             }
-            offset++;
-        }
-        mDescriptors = mDescriptors_Temp;
-*/
-
-
-/*version2: only detect EpiLineDist and remove Dynamic keypoints.
-        cv::Mat mDescriptors_Temp;
-        std::vector<cv::KeyPoint> mvKeys_Temp = mvKeys;
-        while(it_cur != mvKeys.end())
-        {
-            if(!CheckEpiLineDistToRmDynamicPoint(*it_cur,*it_pre,FundMat,0.2))
-            {
-                  mvKeys.erase(it_cur);
-                  it_pre++;
-                  keypoint_sum--;
-            }
-            else
-            {
-                  mDescriptors_Temp.push_back(mDescriptors.row(offset));
-                  it_cur++;
-                  it_pre++;
-            }
-            offset++;
-        }
-        if(keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.1)
-        {
-            //std::cout<<"keypoint_sum: "<<keypoint_sum<<std::endl;
-            std::swap(mvKeys, mvKeys_Temp);
-        }
-        else
-            std::swap(mDescriptors, mDescriptors_Temp);
-
-*/
-
-// version3 : combine EpiLineDist and Object Detect ,if point is in ObjectReigion, increase EpiLineDist Thresh
-        cv::Mat mDescriptors_Temp;
-        std::vector<cv::KeyPoint> mvKeys_Temp = mvKeys;
-
-
-        while (it_cur != mvKeys.end())
-        {
-            if(mbHaveDynamicObject && isInDynamicRegion(*it_cur))
-            {
-                if (!CheckEpiLineDistToRmDynamicPoint(*it_cur, *it_pre, FundMat, 0.2))
-                {
-                    mvKeys.erase(it_cur);
-                    it_pre++;
-                    keypoint_sum--;
-                }
-                else
-                {
-                    mDescriptors_Temp.push_back(mDescriptors.row(offset));
-                    it_cur++;
-                    it_pre++;
-                }
-            }
-            else
-            {
-                if (!CheckEpiLineDistToRmDynamicPoint(*it_cur, *it_pre, FundMat, 1.0))
-                {
-                    mvKeys.erase(it_cur);
-                    it_pre++;
-                    keypoint_sum--;
-                }
-                else
-                {
-                    mDescriptors_Temp.push_back(mDescriptors.row(offset));
-                    it_cur++;
-                    it_pre++;
-                }
-
-            }
-            offset++;
-        }
-
-        if(mbHaveDynamicObject && keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.1) //0.5
-        {
-            //std::cout<<"keypoint_sum: "<<keypoint_sum<<std::endl;
-            std::swap(mvKeys, mvKeys_Temp);
         }
         else
         {
-            std::swap(mDescriptors, mDescriptors_Temp);
+            if (!CheckEpiLineDistToRmDynamicPoint(*it_cur, *it_pre, FundMat, 1.0))
+            {
+                mvKeys.erase(it_cur);
+                it_pre++;
+                Cur_keypoint_sum--;
+            }
+            else
+            {
+                mDescriptors_Temp.push_back(mDescriptors.row(offset));
+                it_cur++;
+                it_pre++;
+            }
+
         }
-            
+        offset++;
     }
 
+    if(mbHaveDynamicObjectForRmDynamicFeature && Cur_keypoint_sum < mpORBextractorLeft->GetnFeatures()*0.1) //0.5
+    {
+        std::swap(mvKeys, mvKeys_Temp);
+    }
+    else
+        std::swap(mDescriptors, mDescriptors_Temp);
+        
+    // std::cout<<"Cur_keypoint_sum: "<<Cur_keypoint_sum<<std::endl;
+    // std::cout<<"percent "<<son*100/mom<<" %"<<std::endl;
+    // double son = nmatches;
+    // std::cout<<"end: "<<son*100/mom<<" % "<<std::endl;
 
-    //std::cout<<"percent "<<son*100/mom<<" %"<<std::endl;
-    //double son = nmatches;
-    //std::cout<<"end: "<<son*100/mom<<" % "<<std::endl;
-
-    return keypoint_sum;
+    return Cur_keypoint_sum;
 }
 bool Frame::CheckEpiLineDistToRmDynamicPoint(const cv::KeyPoint &kp1,const cv::Point2f &kp2, cv::Mat &F12
                                              ,const double threshold)
@@ -593,26 +623,30 @@ bool Frame::CheckEpiLineDistToRmDynamicPoint(const cv::KeyPoint &kp1,const cv::P
     double dist = son / mom;
 
     //return dist < 1.0;
-    //std::cout<<"dist:"<<dist<<" octave:"<<kp2.octave<<" sigma:"<<3.84*CurrentF.mvLevelSigma2[kp2.octave]+0<<std::endl;
     return dist < threshold;
 }
-
-bool Frame::isInDynamicRegion(const cv::KeyPoint &kp)
+// if in DynamicRegion,return true, otherwise return fasle.
+bool Frame::isInDynamicRegion(const cv::Point2f &kp,const std::vector<cv::Rect_<float> >& vDynamicBorder_)
 {
-    float kp_x = kp.pt.x;
-    float kp_y = kp.pt.y;
-
-    for(int i = 0; i < mvObjects2D.size(); ++i)
+    float x = kp.x;
+    float y = kp.y;
+    for(unsigned int i = 0; i < vDynamicBorder_.size(); i++)
     {
-        int class_id = mvObjects2D[i].id;
-        if (class_id == 15)
-        {
-            if(kp_x > mvObjects2D[i].rect.x && kp_x < mvObjects2D[i].rect.x+mvObjects2D[i].rect.width &&
-               kp_y > mvObjects2D[i].rect.y && kp_y < mvObjects2D[i].rect.y+mvObjects2D[i].rect.height)
-            {
-                return true;
-            }
-        }
+        cv::Rect_<float> rect2d = vDynamicBorder_[i];
+        if(x > rect2d.x && x < rect2d.x + rect2d.width && y > rect2d.y && y < rect2d.y + rect2d.height)
+            return true;
+    }
+    return false;
+}
+bool Frame::isInDynamicRegion(const cv::KeyPoint &kp,const std::vector<cv::Rect_<float> >& vDynamicBorder_)
+{
+    float x = kp.pt.x;
+    float y = kp.pt.y;
+    for(unsigned int i = 0; i < vDynamicBorder_.size(); i++)
+    {
+        cv::Rect_<float> rect2d = vDynamicBorder_[i];
+        if(x > rect2d.x && x < rect2d.x + rect2d.width && y > rect2d.y && y < rect2d.y + rect2d.height)
+            return true;
     }
     return false;
 }

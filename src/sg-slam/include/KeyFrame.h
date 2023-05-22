@@ -193,7 +193,8 @@ public:
     cv::Mat mImRGB;//for pointcloudmapping
     cv::Mat mImDep;//for pointcloudmapping
     std::vector<Object2D> mvObjects2D;
-    bool mbHaveDynamicObject;
+    bool mbHaveDynamicObjectForMapping;
+    std::vector<cv::Rect_<float> > mvPotentialDynamicBorderForMapping;
     ros::Time ros_time;
 
 

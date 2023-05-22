@@ -58,9 +58,13 @@ namespace ORB_SLAM2 {
         bool mbNewImageFlag;
         Tracking* mpTracker;
 
-        bool bHaveDynamicObject = false;
         std::vector<Object2D> mvObjects2D;
         std::vector<Object2D> mvObjects2D_to_View;
+        
+        bool mbHaveDynamicObjectForMapping = false;
+        bool mbHaveDynamicObjectForRmDynamicFeature = false;
+        std::vector<cv::Rect_<float> > mvPotentialDynamicBorderForMapping;
+        std::vector<cv::Rect_<float> > mvPotentialDynamicBorderForRmDynamicFeature;
 
     private:
         const int target_size = 300;

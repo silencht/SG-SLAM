@@ -93,5 +93,5 @@ Detector3D.DetectSimilarCompareRatio: 0.5
 Detector3D.global_pc_update_kf_threshold: 25
 
 Detector2D.detection_confidence_threshold: 0.95
-Detector2D.dynamic_detection_confidence_threshold: 0.1
+Detector2D.dynamic_detection_confidence_threshold: 0.05
 

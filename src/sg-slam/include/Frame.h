@@ -65,7 +65,8 @@ public:
     int  RmDynamicPointWithSemanticAndGeometry(const cv::Mat &imGrayPre, const cv::Mat &imGray);
     bool CheckEpiLineDistToRmDynamicPoint(const cv::KeyPoint &kp1,const cv::Point2f &kp2, cv::Mat &F12
                                          ,const double threshold = 1.0);
-    bool isInDynamicRegion(const cv::KeyPoint &kp);
+    bool isInDynamicRegion(const cv::Point2f  &kp,const std::vector<cv::Rect_<float> >& vDynamicBorder_);
+    bool isInDynamicRegion(const cv::KeyPoint &kp,const std::vector<cv::Rect_<float> >& vDynamicBorder_);
     // Compute Bag of Words representation.
     void ComputeBoW();
 
@@ -107,7 +108,10 @@ public:
 public:
     Tracking* mpTracker;
     std::vector<Object2D> mvObjects2D;
-    bool mbHaveDynamicObject;
+    bool mbHaveDynamicObjectForMapping;
+    bool mbHaveDynamicObjectForRmDynamicFeature;
+    std::vector<cv::Rect_<float> > mvPotentialDynamicBorderForMapping;
+    std::vector<cv::Rect_<float> > mvPotentialDynamicBorderForRmDynamicFeature;
     
     // Vocabulary used for relocalization.
     ORBVocabulary* mpORBvocabulary;
