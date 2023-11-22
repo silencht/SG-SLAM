@@ -80,7 +80,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr world_pc_ ,pcl::PointCloud<pcl::PointXYZR
         semanticobj_pc_->width = pkf->mImDep.cols;
         semanticobj_pc_->height = pkf->mImDep.rows;
         semanticobj_pc_->is_dense = false;
-        std::cout<<"????"<<std::endl;
+
         for (int m = 0; m < pkf->mImDep.rows; m++)
         {
             for (int n = 0; n < pkf->mImDep.cols; n++)
