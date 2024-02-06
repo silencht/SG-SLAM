@@ -14,6 +14,8 @@ We performed an experimental evaluation on the TUM dataset, the Bonn dataset, an
 
 （For the Chinese version, see the README-zh.md file in the directory）
 
+（**[硕士毕业论文见/doc目录](https://kns.cnki.net/kcms2/article/abstract?v=A4c134OkBY89HY-IQP8ZRIpp_9SfQuIfsYpw_9qtvftq7ChBZP5PKLT4XlHfRZr07gDt1eH0cyferPskgmLonqA6u0CDYOzRF-pZUcNd006SERL0NUyPyZFnPbG5y9NJ&uniplatform=NZKPT&flag=copy)**）
+
 （**中文版本见目录下README-zh.md文件**）
 
 
