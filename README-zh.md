@@ -20,15 +20,15 @@ SG-SLAM是一个基于[ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2)框架的
 
 **图1**. SG-SLAM系统框架。ORB-SLAM2的原始框架以水绿色背景呈现，新（或修改的）功能以红色背景呈现。
 
-<img src="./doc/semantic-object-metric-map-zh.png" style="zoom: 25%;" />
+<img src="./doc/semantic-object-metric-map-zh.png" width="350px">
 
 **图2**.   tum rgbd dataset fr3/walking_xyz 序列的语义对象度量地图
 
-<img src="./doc/octomap-zh.png" style="zoom: 15%;" />
+<img src="./doc/octomap-zh.png" width="600px">
 
 **图3**.  tum rgbd dataset fr3/long office household 序列的八叉树地图
 
-<img src="./doc/realmap-zh.png" style="zoom: 15%;" />
+<img src="./doc/realmap-zh.png" width="600px">
 
 **图**4.  实际运行效果图
 
