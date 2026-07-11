@@ -18,6 +18,8 @@ Fast dynamic feature rejection combining semantic and geometric information · S
 [![Thesis-CNKI](https://img.shields.io/badge/Master's%20Thesis-CNKI-2D6CDF?logo=readthedocs&logoColor=white)](https://kns.cnki.net/kcms2/article/abstract?v=A4c134OkBY89HY-IQP8ZRIpp_9SfQuIfsYpw_9qtvftq7ChBZP5PKLT4XlHfRZr07gDt1eH0cyferPskgmLonqA6u0CDYOzRF-pZUcNd006SERL0NUyPyZFnPbG5y9NJ&uniplatform=NZKPT&flag=copy)
 [![Thesis-PDF](https://img.shields.io/badge/Master's%20Thesis-Local%20PDF-8A2BE2?logo=adobeacrobatreader&logoColor=white)](./doc/master's%20thesis.pdf)
 
+📖 Hit a problem? Check the **[FAQ](./FAQ.md)** first (compiled from all GitHub Issues)
+
 </div>
 
 ---
